@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
 
+pub struct GitRepo(pub PathBuf);
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GitHistory {
     pub handle: String,
@@ -21,17 +23,20 @@ enum GitState {
     Files,
 }
 
-impl GitHistory {
-    pub fn parse(path: &PathBuf) -> Result<Vec<GitHistory>> {
+impl GitRepo {
+    pub fn parse(&self, since: Option<usize>) -> Result<Vec<GitHistory>> {
         let mut history = vec![];
-        let result = Command::new("git")
-            .current_dir(path)
+        let mut result = Command::new("git")
+            .current_dir(&self.0)
             .arg("log")
             .arg("--name-only")
             .arg("--pretty=format:%an%n%h%n%ad%n%s")
             .arg("--date=unix")
-            .arg(".")
-            .output()?;
+            .arg(".");
+        if let Some(since) = since {
+            result = result.arg(&format!("--since={}", since));
+        }
+        let result = result.output()?;
         let s = String::from_utf8(result.stdout)?;
         let mut row = GitHistory {
             handle: "".to_string(),
