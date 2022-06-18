@@ -3,6 +3,7 @@ use std::path::PathBuf;
 mod db;
 mod git;
 
+use crate::db::processor::Processor;
 use crate::db::Db;
 use crate::git::repo::GitRepo;
 use anyhow::Result;
@@ -51,7 +52,8 @@ fn main() -> Result<()> {
                 name: name.clone(),
                 url: repo_url.clone(),
             };
-            let result = repo.store_data(&db)?;
+            let mut processor = Processor::new(repo, &db)?;
+            let _ = processor.fetch_commits_and_update_db();
 
             // let history = db.store_history(repo, since.clone())?;
 

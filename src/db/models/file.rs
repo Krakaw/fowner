@@ -19,7 +19,7 @@ impl File {
         if let Some(row) = rows.next()? {
             Ok(File::from(row))
         } else {
-            Err(anyhow!("Project not found"))
+            Err(anyhow!("File not found"))
         }
     }
 }
@@ -38,20 +38,6 @@ impl NewFile {
         let _res = stmt.execute(params![self.project_id.clone(), self.path.clone()])?;
         File::load_by_path(self.project_id, self.path.clone(), db)
     }
-}
-pub struct FileOwners {
-    pub file_id: usize,
-    pub owner_id: usize,
-    pub action_date: NaiveDateTime,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
-}
-
-pub struct FileFeatures {
-    pub file_id: usize,
-    pub feature_id: usize,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
 }
 
 impl<'stmt> From<&Row<'stmt>> for File {

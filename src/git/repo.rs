@@ -86,22 +86,4 @@ impl GitRepo {
         }
         Ok(history)
     }
-
-    pub fn store_data(&self, db: &Db) -> Result<(Project)> {
-        // Create a new project
-        let project = NewProject::from(self).new(db)?;
-        // Fetch the commits and store them in the db
-        let history = db.store_history(self, None)?;
-        Ok((project))
-    }
-}
-
-impl From<&GitRepo> for NewProject {
-    fn from(repo: &GitRepo) -> Self {
-        NewProject {
-            name: repo.name.clone(),
-            repo_url: repo.url.clone(),
-            path: repo.path.clone(),
-        }
-    }
 }

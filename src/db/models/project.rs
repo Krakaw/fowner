@@ -1,10 +1,11 @@
-use crate::Db;
+use crate::{Db, GitRepo};
 use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use std::fs;
 use std::path::PathBuf;
 
+#[derive(Clone)]
 pub struct Project {
     pub id: u32,
     pub name: Option<String>,
@@ -57,6 +58,16 @@ impl<'stmt> From<&Row<'stmt>> for Project {
             path: row.get(3).unwrap(),
             created_at: NaiveDateTime::from_timestamp(row.get(4).unwrap(), 0),
             updated_at: NaiveDateTime::from_timestamp(row.get(5).unwrap(), 0),
+        }
+    }
+}
+
+impl From<&GitRepo> for NewProject {
+    fn from(repo: &GitRepo) -> Self {
+        NewProject {
+            name: repo.name.clone(),
+            repo_url: repo.url.clone(),
+            path: repo.path.clone(),
         }
     }
 }

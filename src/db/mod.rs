@@ -1,5 +1,6 @@
 mod migrations;
 pub mod models;
+pub mod processor;
 
 use crate::db::models::commit::Commit;
 use crate::git::history::GitHistory;
@@ -31,25 +32,5 @@ impl Db {
             connection.execute(migration, params![])?;
         }
         Ok(())
-    }
-
-    pub fn store_history(&self, repo: &GitRepo, since: Option<i64>) -> Result<Vec<GitHistory>> {
-        let history = self.gather_data(repo, since)?;
-        for row in history.clone() {
-            row.store(self)?;
-        }
-        Ok(history)
-    }
-
-    pub fn gather_data(&self, repo: &GitRepo, since: Option<i64>) -> Result<Vec<GitHistory>> {
-        let latest_commit = if let Some(since) = since {
-            since
-        } else {
-            Commit::fetch_latest(self)
-                .map(|c| c.commit_time.timestamp())
-                .unwrap_or_else(|_| 0_i64)
-        };
-        let history = repo.parse((latest_commit + 1) as usize)?;
-        Ok(history)
     }
 }

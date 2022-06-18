@@ -26,11 +26,14 @@ pub fn migrations() -> Vec<&'static str> {
             CREATE TABLE IF NOT EXISTS files
             (
                 id         INTEGER  PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER ,
+                project_id INTEGER NOT NULL,
                 path       TEXT NOT NULL,
                 created_at INT  NOT NULL,
                 updated_at INT  NOT NULL
             );
+        "#,
+        r#"
+            CREATE UNIQUE INDEX idx_files_project_id_path ON files (project_id, path);
         "#,
         r#"
             CREATE TABLE IF NOT EXISTS file_owners
@@ -55,7 +58,7 @@ pub fn migrations() -> Vec<&'static str> {
             CREATE TABLE IF NOT EXISTS owners
             (
                 id            INTEGER  PRIMARY KEY AUTOINCREMENT,
-                github_handle TEXT NOT NULL,
+                handle        TEXT NOT NULL UNIQUE,
                 name          TEXT NULL,
                 created_at    INT  NOT NULL,
                 updated_at    INT  NOT NULL

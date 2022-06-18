@@ -20,17 +20,3 @@ impl GitHistory {
         Ok(())
     }
 }
-
-impl From<&GitHistory> for Commit {
-    fn from(history: &GitHistory) -> Self {
-        Commit {
-            id: 0,
-            file_id: 0,
-            sha: "".to_string(),
-            description: "".to_string(),
-            commit_time: (),
-            created_at: (),
-            updated_at: (),
-        }
-    }
-}
