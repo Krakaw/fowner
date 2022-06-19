@@ -8,6 +8,7 @@ pub struct FileOwner {
     pub file_id: u32,
     pub owner_id: u32,
     pub action_date: NaiveDateTime,
+    pub sha: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -16,6 +17,7 @@ pub struct NewFileOwner {
     pub file_id: u32,
     pub owner_id: u32,
     pub action_date: NaiveDateTime,
+    pub sha: String,
 }
 
 impl FileOwner {
@@ -27,7 +29,7 @@ impl FileOwner {
     ) -> Result<Vec<FileOwner>> {
         let conn = db.pool.get()?;
         let mut result = vec![];
-        let mut stmt = conn.prepare("SELECT file_id, owner_id, action_date, created_at, updated_at FROM file_owners WHERE file_id = ?1 AND (?2 IS NULL OR owner_id = ?2) AND (?3 IS NULL or action_date = ?3)")?;
+        let mut stmt = conn.prepare("SELECT file_id, owner_id, action_date, sha, created_at, updated_at FROM file_owners WHERE file_id = ?1 AND (?2 IS NULL OR owner_id = ?2) AND (?3 IS NULL or action_date = ?3)")?;
 
         let rows = stmt.query_map(
             params![file_id, owner_id, action_date.map(|d| d.timestamp())],
@@ -46,8 +48,9 @@ impl<'stmt> From<&Row<'stmt>> for FileOwner {
             file_id: row.get(0).unwrap(),
             owner_id: row.get(1).unwrap(),
             action_date: NaiveDateTime::from_timestamp(row.get(2).unwrap(), 0),
-            created_at: NaiveDateTime::from_timestamp(row.get(3).unwrap(), 0),
-            updated_at: NaiveDateTime::from_timestamp(row.get(4).unwrap(), 0),
+            sha: row.get(3).unwrap(),
+            created_at: NaiveDateTime::from_timestamp(row.get(4).unwrap(), 0),
+            updated_at: NaiveDateTime::from_timestamp(row.get(5).unwrap(), 0),
         }
     }
 }
@@ -55,11 +58,12 @@ impl<'stmt> From<&Row<'stmt>> for FileOwner {
 impl NewFileOwner {
     pub fn new(&self, db: &Db) -> Result<FileOwner> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare("INSERT INTO file_owners (file_id, owner_id, action_date, created_at, updated_at) VALUES (?1, ?2, ?3, strftime('%s','now'), strftime('%s','now'))")?;
+        let mut stmt = conn.prepare("INSERT INTO file_owners (file_id, owner_id, action_date, sha, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, strftime('%s','now'), strftime('%s','now'))")?;
         let _res = stmt.execute(params![
             self.file_id,
             self.owner_id,
             self.action_date.timestamp(),
+            self.sha
         ])?;
         let file_owner = FileOwner::load(
             self.file_id,

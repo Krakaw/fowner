@@ -1,5 +1,6 @@
 use chrono::NaiveDateTime;
 
+#[allow(dead_code)]
 pub struct Feature {
     pub id: usize,
     pub name: String,

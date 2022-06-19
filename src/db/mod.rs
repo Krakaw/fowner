@@ -2,13 +2,9 @@ mod migrations;
 pub mod models;
 pub mod processor;
 
-use crate::db::models::commit::Commit;
-use crate::git::history::GitHistory;
-use crate::GitRepo;
 use anyhow::Result;
 use r2d2::Pool;
 use r2d2_sqlite::rusqlite::params;
-use r2d2_sqlite::rusqlite::types::{FromSql, FromSqlResult, ValueRef};
 use r2d2_sqlite::SqliteConnectionManager;
 use std::path::PathBuf;
 use std::sync::Arc;

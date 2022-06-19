@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 mod db;
 mod git;
-#[macro_use]
 extern crate log;
 use crate::db::processor::Processor;
 use crate::db::Db;
@@ -30,9 +29,6 @@ enum Commands {
         /// Git repo url
         #[clap(short, long)]
         repo_url: Option<String>,
-        /// Fetch the latest since
-        #[clap(short, long)]
-        since: Option<i64>,
     },
     Migrate,
 }
@@ -44,7 +40,6 @@ fn main() -> Result<()> {
     match &cli.command {
         Commands::History {
             filepath,
-            since,
             name,
             repo_url,
         } => {
@@ -54,7 +49,10 @@ fn main() -> Result<()> {
                 url: repo_url.clone(),
             };
             let mut processor = Processor::new(repo, &db)?;
+            // Fetch the commits from the local repository and insert the required records
+            // Projects, Owners, Files, Commits, File Owners
             let _ = processor.fetch_commits_and_update_db()?;
+            // TODO: Come up with a solution for matching features with files (I'm thinking a dotfile in the repo)
 
             // let history = db.store_history(repo, since.clone())?;
 

@@ -3,7 +3,6 @@ use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
-use std::fs;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Owner {

@@ -4,13 +4,16 @@ pub fn migrations() -> Vec<&'static str> {
             CREATE TABLE IF NOT EXISTS commits
             (
                 id          INTEGER  PRIMARY KEY AUTOINCREMENT,
-                file_id     INTEGER   NOT NULL,
+                project_id  INTEGER NOT NULL,
                 sha         TEXT NOT NULL,
                 description TEXT NULL,
                 commit_time INT  NOT NULL,
                 created_at  INT  NOT NULL,
                 updated_at  INT  NOT NULL
             );
+        "#,
+        r#"
+            CREATE UNIQUE INDEX idx_commits_project_id_sha ON commits (project_id, sha);
         "#,
         r#"
             CREATE TABLE IF NOT EXISTS features
@@ -41,6 +44,7 @@ pub fn migrations() -> Vec<&'static str> {
                 file_id     INTEGER,
                 owner_id    INTEGER,
                 action_date INT NOT NULL,
+                sha         TEXT NOT NULL,
                 created_at  INT NOT NULL,
                 updated_at  INT NOT NULL
             );

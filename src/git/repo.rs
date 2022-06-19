@@ -1,8 +1,7 @@
-use crate::db::models::project::{NewProject, Project};
 use crate::git::history::GitHistory;
-use crate::Db;
-use anyhow::Result;
-use std::path::{PathBuf, Prefix};
+use anyhow::{anyhow, Result};
+use chrono::NaiveDateTime;
+use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
 
@@ -21,25 +20,28 @@ enum GitState {
 }
 
 impl GitRepo {
-    pub fn parse(&self, since: usize) -> Result<Vec<GitHistory>> {
+    pub fn parse(&self, since: Option<NaiveDateTime>) -> Result<Vec<GitHistory>> {
         let mut history = vec![];
+        let mut args = vec![
+            "--no-pager".to_string(),
+            "log".to_string(),
+            "--name-only".to_string(),
+            "--pretty=format:%an%n%h%n%ad%n%s".to_string(),
+            "--date=unix".to_string(),
+        ];
+
+        if let Some(since) = since {
+            let after = format!("--after={}", since);
+            args.push(after);
+        }
         let result = Command::new("git")
             .current_dir(&self.path)
-            .arg("log")
-            .arg("--name-only")
-            .arg("--pretty=format:%an%n%h%n%ad%n%s")
-            .arg("--date=unix")
-            .arg(format!(
-                "{}",
-                if since > 0 {
-                    format!("--since={}", since)
-                } else {
-                    "".to_string()
-                }
-            ))
+            .args(args)
             .arg(".")
             .output()?;
-
+        if !result.status.success() {
+            return Err(anyhow!(String::from_utf8(result.stderr)?));
+        }
         let s = String::from_utf8(result.stdout)?;
         let mut row = GitHistory {
             handle: "".to_string(),
