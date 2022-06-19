@@ -1,3 +1,4 @@
+use crate::db::models::file_owner::FileOwner;
 use crate::Db;
 use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
@@ -23,6 +24,10 @@ impl File {
         } else {
             Err(anyhow!("File not found"))
         }
+    }
+
+    pub fn get_owners(&self, db: &Db) -> Result<Vec<FileOwner>> {
+        FileOwner::load(self.id, None, None, db)
     }
 }
 pub struct NewFile {

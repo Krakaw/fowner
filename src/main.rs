@@ -2,6 +2,8 @@ use std::path::PathBuf;
 mod db;
 mod git;
 extern crate log;
+use crate::db::models::file::File;
+use crate::db::models::project::Project;
 use crate::db::processor::Processor;
 use crate::db::Db;
 use crate::git::repo::GitRepo;
@@ -30,6 +32,14 @@ enum Commands {
         #[clap(short, long)]
         repo_url: Option<String>,
     },
+    FileOwners {
+        /// File name
+        #[clap(short, long)]
+        name: String,
+        /// Path of repository to extract history from
+        #[clap(short, long)]
+        filepath: PathBuf,
+    },
     Migrate,
 }
 fn main() -> Result<()> {
@@ -57,6 +67,13 @@ fn main() -> Result<()> {
             // let history = db.store_history(repo, since.clone())?;
 
             // eprintln!("{}", serde_json::to_string(&history)?);
+        }
+        Commands::FileOwners { filepath, name } => {
+            let project = Project::load_by_path(filepath, &db)?;
+
+            let file = File::load_by_path(project.id, name.clone(), &db)?;
+            let owners = file.get_owners(&db)?;
+            eprintln!("{}", serde_json::to_string(&owners)?);
         }
         Commands::Migrate => db.init()?,
     }
