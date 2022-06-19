@@ -5,7 +5,7 @@ use r2d2_sqlite::rusqlite::{params, Row};
 use std::fs;
 use std::path::PathBuf;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Project {
     pub id: u32,
     pub name: Option<String>,

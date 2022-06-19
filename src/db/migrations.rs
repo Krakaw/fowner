@@ -38,8 +38,8 @@ pub fn migrations() -> Vec<&'static str> {
         r#"
             CREATE TABLE IF NOT EXISTS file_owners
             (
-                file_id     INTEGER  PRIMARY KEY,
-                project_id  INTEGER ,
+                file_id     INTEGER,
+                owner_id    INTEGER,
                 action_date INT NOT NULL,
                 created_at  INT NOT NULL,
                 updated_at  INT NOT NULL

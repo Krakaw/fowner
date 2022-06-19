@@ -1,8 +1,8 @@
-use serde_json;
 use std::path::PathBuf;
 mod db;
 mod git;
-
+#[macro_use]
+extern crate log;
 use crate::db::processor::Processor;
 use crate::db::Db;
 use crate::git::repo::GitRepo;
@@ -37,6 +37,7 @@ enum Commands {
     Migrate,
 }
 fn main() -> Result<()> {
+    env_logger::init();
     let cli = Cli::parse();
     let db = Db::new(&cli.database_path)?;
 
@@ -53,7 +54,7 @@ fn main() -> Result<()> {
                 url: repo_url.clone(),
             };
             let mut processor = Processor::new(repo, &db)?;
-            let _ = processor.fetch_commits_and_update_db();
+            let _ = processor.fetch_commits_and_update_db()?;
 
             // let history = db.store_history(repo, since.clone())?;
 

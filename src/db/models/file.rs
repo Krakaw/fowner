@@ -14,7 +14,9 @@ pub struct File {
 impl File {
     pub fn load_by_path(project_id: u32, path: String, db: &Db) -> Result<File> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare("SELECT id, project_id, path, created_at, updated_at FROM files WHERE LOWER(path) = LOWER(?);")?;
+        let mut stmt = conn.prepare(
+            "SELECT id, project_id, path, created_at, updated_at FROM files WHERE project_id = ?1 AND path = ?2;",
+        )?;
         let mut rows = stmt.query(params![project_id, path])?;
         if let Some(row) = rows.next()? {
             Ok(File::from(row))
@@ -34,7 +36,7 @@ impl NewFile {
             return Ok(file);
         };
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare("INSERT INTO files (project_id, path, created_at, updated_at) VALUES (?, ?, strftime('%s','now'), strftime('%s','now'))")?;
+        let mut stmt = conn.prepare("INSERT INTO files (project_id, path, created_at, updated_at) VALUES (?1, ?2, strftime('%s','now'), strftime('%s','now'))")?;
         let _res = stmt.execute(params![self.project_id.clone(), self.path.clone()])?;
         File::load_by_path(self.project_id, self.path.clone(), db)
     }

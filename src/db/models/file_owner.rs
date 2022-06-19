@@ -55,7 +55,7 @@ impl<'stmt> From<&Row<'stmt>> for FileOwner {
 impl NewFileOwner {
     pub fn new(&self, db: &Db) -> Result<FileOwner> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare("INSERT INTO file_owners (file_id, owner_id, action_date, created_at, updated_at) VALUES (?, ?, ?, strftime('%s','now'), strftime('%s','now'))")?;
+        let mut stmt = conn.prepare("INSERT INTO file_owners (file_id, owner_id, action_date, created_at, updated_at) VALUES (?1, ?2, ?3, strftime('%s','now'), strftime('%s','now'))")?;
         let _res = stmt.execute(params![
             self.file_id,
             self.owner_id,
@@ -70,6 +70,6 @@ impl NewFileOwner {
         file_owner
             .first()
             .cloned()
-            .ok_or(anyhow!("Could not file file owner"))
+            .ok_or(anyhow!("Could not find file owner"))
     }
 }
