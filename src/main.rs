@@ -1,7 +1,8 @@
 use std::path::PathBuf;
-mod db;
-mod git;
 mod controllers;
+mod db;
+mod errors;
+mod git;
 
 extern crate log;
 use crate::db::models::file::File;
@@ -9,7 +10,7 @@ use crate::db::models::project::Project;
 use crate::db::processor::Processor;
 use crate::db::Db;
 use crate::git::repo::GitRepo;
-use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
@@ -46,7 +47,9 @@ enum Commands {
     Serve,
     Migrate,
 }
-fn main() -> Result<()> {
+
+#[actix_web::main]
+async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
     let cli = Cli::parse();
     let db = Db::new(&cli.database_path)?;
@@ -80,17 +83,7 @@ fn main() -> Result<()> {
             eprintln!("{}", serde_json::to_string(&owners)?);
         }
         Commands::Migrate => db.init()?,
-        Commands::Serve => {
-            HttpServer::new(|| {
-                App::new()
-                    .service(hello)
-                    .service(echo)
-                    .route("/hey", web::get().to(manual_hello))
-            })
-            .bind(("127.0.0.1", 8080))?
-            .run()
-            .await
-        }
+        Commands::Serve => controllers::Server::start(db).await?,
     }
 
     Ok(())
