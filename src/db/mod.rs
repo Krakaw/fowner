@@ -6,7 +6,7 @@ use anyhow::Result;
 use r2d2::Pool;
 use r2d2_sqlite::rusqlite::params;
 use r2d2_sqlite::SqliteConnectionManager;
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -15,7 +15,7 @@ pub struct Db {
 }
 
 impl Db {
-    pub fn new(connection_string: &PathBuf) -> Result<Self> {
+    pub fn new(connection_string: &Path) -> Result<Self> {
         let sqlite_connection_manager = SqliteConnectionManager::file(connection_string);
         let sqlite_pool = r2d2::Pool::new(sqlite_connection_manager)?;
         let pool = Arc::new(sqlite_pool);

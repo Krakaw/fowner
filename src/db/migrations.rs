@@ -19,6 +19,7 @@ pub fn migrations() -> Vec<&'static str> {
             CREATE TABLE IF NOT EXISTS features
             (
                 id          INTEGER  PRIMARY KEY AUTOINCREMENT,
+                project_id  INTEGER NOT NULL,
                 name        TEXT NOT NULL,
                 description TEXT NULL,
                 created_at  INT  NOT NULL,

@@ -44,6 +44,14 @@ enum Commands {
         #[clap(short, long)]
         filepath: PathBuf,
     },
+    GenerateDotfile {
+        /// Path of repository to extract history from
+        #[clap(short, long)]
+        filepath: PathBuf,
+        /// Dotfile filename
+        #[clap(short, long, default_value = ".fowner.features")]
+        dotfile: String,
+    },
     Serve,
     Migrate,
 }
@@ -74,6 +82,11 @@ async fn main() -> Result<(), anyhow::Error> {
             // let history = db.store_history(repo, since.clone())?;
 
             // eprintln!("{}", serde_json::to_string(&history)?);
+        }
+        Commands::GenerateDotfile { filepath, dotfile } => {
+            let project = Project::load_by_path(filepath, &db)?;
+            let dotfile_path = filepath.join(dotfile);
+            let _path = File::generate_feature_file(project.id, dotfile_path, &db)?;
         }
         Commands::FileOwners { filepath, name } => {
             let project = Project::load_by_path(filepath, &db)?;

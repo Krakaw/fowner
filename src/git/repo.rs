@@ -77,7 +77,7 @@ impl GitRepo {
                     state = GitState::Files;
                 }
                 GitState::Files => {
-                    if i == "" {
+                    if i.is_empty() {
                         state = GitState::Handle;
                         history.push(row.clone());
                     } else {

@@ -15,7 +15,7 @@ pub struct Processor<'a> {
 
 impl<'a> Processor<'a> {
     pub fn new(repo: GitRepo, db: &'a Db) -> Result<Self> {
-        let project = NewProject::from(&repo).new(db)?;
+        let project = NewProject::from(&repo).save(db)?;
         Ok(Processor { db, repo, project })
     }
 
@@ -29,14 +29,14 @@ impl<'a> Processor<'a> {
         let history = self.repo.parse(latest_commit)?;
         let project = self.project.clone();
         let project_id = project.id;
-        for git_history in history.clone() {
+        for git_history in history {
             // For each GitHistory
             // 1. We need to create an Owner from the handle
             let owner = NewOwner {
                 handle: git_history.handle,
                 name: None,
             }
-            .new(self.db)?;
+            .save(self.db)?;
             // 2. We need to create a Commit for the hash
             let commit_date = NaiveDateTime::from_timestamp(git_history.timestamp as i64, 0);
             let sha = git_history.hash.clone();
@@ -44,16 +44,16 @@ impl<'a> Processor<'a> {
                 project_id,
                 sha: sha.clone(),
                 description: git_history.summary.clone(),
-                commit_time: commit_date.clone(),
+                commit_time: commit_date,
             }
-            .new(self.db)?;
+            .save(self.db)?;
             // 3a. We need to extract all of the files and create a new File entry for each that is linked to the project
             for file_path in git_history.files {
                 let file = NewFile {
                     project_id: project.id,
                     path: file_path,
                 }
-                .new(self.db)?;
+                .save(self.db)?;
 
                 // 2c. We need to create a FileOwner for each file
                 NewFileOwner {
@@ -62,7 +62,7 @@ impl<'a> Processor<'a> {
                     owner_id: owner.id,
                     action_date: commit_date,
                 }
-                .new(self.db)?;
+                .save(self.db)?;
             }
         }
         Ok(())

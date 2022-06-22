@@ -26,7 +26,7 @@ impl Owner {
         let mut stmt = conn.prepare(
             "SELECT id, handle, name, created_at, updated_at FROM owners WHERE handle LIKE ?1;",
         )?;
-        let mut rows = stmt.query_map(params![format!("%{}%", handle)], |r| Ok(Owner::from(r)))?;
+        let rows = stmt.query_map(params![format!("%{}%", handle)], |r| Ok(Owner::from(r)))?;
         let mut result = vec![];
         for row in rows {
             result.push(row?);
@@ -46,7 +46,7 @@ impl Owner {
 }
 
 impl NewOwner {
-    pub fn new(&self, db: &Db) -> Result<Owner, FownerError> {
+    pub fn save(&self, db: &Db) -> Result<Owner, FownerError> {
         if let Ok(owner) = Owner::load_by_handle(self.handle.clone(), db) {
             return Ok(owner);
         };

@@ -1,33 +1,119 @@
+use crate::db::models::feature::NewFeature;
 use crate::db::models::file_owner::FileOwner;
+use crate::errors::FownerError;
 use crate::Db;
-use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
+use std::path::PathBuf;
 
+#[derive(Debug)]
 pub struct File {
     pub id: u32,
     pub project_id: u32,
     pub path: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
+    pub feature_names: Vec<String>,
 }
 
 impl File {
-    pub fn load_by_path(project_id: u32, path: String, db: &Db) -> Result<File> {
+    fn sql(where_clause: Option<String>) -> String {
+        format!(
+            r#"
+        SELECT f.id, f.project_id, f.path, f.created_at, f.updated_at, GROUP_CONCAT(fe.name, ',') AS feature_names
+        FROM files f
+                 LEFT JOIN file_features ff on f.id = ff.file_id
+                 LEFT JOIN features fe on ff.feature_id = fe.id
+        WHERE project_id = ?1
+        {}
+        GROUP BY f.id;
+        "#,
+            where_clause.unwrap_or_default()
+        )
+    }
+    pub fn all(project_id: u32, db: &Db) -> Result<Vec<File>, FownerError> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare(
-            "SELECT id, project_id, path, created_at, updated_at FROM files WHERE project_id = ?1 AND path = ?2;",
-        )?;
+        let mut stmt = conn.prepare(&File::sql(None))?;
+        let rows = stmt.query_map(params![project_id], |r| Ok(File::from(r)))?;
+        let mut result = vec![];
+        for row in rows {
+            result.push(row?)
+        }
+
+        Ok(result)
+    }
+
+    pub fn load_by_path(project_id: u32, path: String, db: &Db) -> Result<File, FownerError> {
+        let conn = db.pool.get()?;
+        let mut stmt = conn.prepare(&File::sql(Some("AND path = ?2".to_string())))?;
         let mut rows = stmt.query(params![project_id, path])?;
         if let Some(row) = rows.next()? {
             Ok(File::from(row))
         } else {
-            Err(anyhow!("File not found"))
+            Err(FownerError::NotFound)
         }
     }
 
-    pub fn get_owners(&self, db: &Db) -> Result<Vec<FileOwner>> {
+    pub fn get_owners(&self, db: &Db) -> Result<Vec<FileOwner>, FownerError> {
         FileOwner::load(self.id, None, None, db)
+    }
+
+    pub fn generate_feature_file(
+        project_id: u32,
+        dotfile: PathBuf,
+        db: &Db,
+    ) -> Result<PathBuf, FownerError> {
+        // Load any existing file
+        let existing_contents = if dotfile.exists() {
+            std::fs::read_to_string(dotfile.clone())?
+        } else {
+            String::new()
+        };
+        let existing_path_features = existing_contents
+            .split('\n')
+            .filter_map(|r| {
+                let row = r.trim();
+                if !row.is_empty() {
+                    let parts = row.split('|').collect::<Vec<&str>>();
+                    return Some((
+                        parts.get(0).cloned().unwrap(),
+                        parts
+                            .get(1)
+                            .cloned()
+                            .unwrap()
+                            .split(',')
+                            .collect::<Vec<&str>>(),
+                    ));
+                }
+                None
+            })
+            .collect::<Vec<(&str, Vec<&str>)>>();
+
+        let _files = Self::all(project_id, db)?;
+        for existing_row in existing_path_features {
+            for feature_str in existing_row.1 {
+                // Check if the features exist, if not create them and attach them to the File
+                let _feature = NewFeature {
+                    project_id,
+                    name: feature_str.to_string(),
+                    description: None,
+                }
+                .save(db)?;
+            }
+
+            // Then check if the db has any features that aren't in the local file list
+            // If the features are at parity remove the item from the `files` Vec
+        }
+        // let files = Self::all(project_id, db)?;
+        // std::fs::write(
+        //     dotfile.clone(),
+        //     files
+        //         .iter()
+        //         .map(|r| format!("{}|{}", r.path.clone(), r.feature_names.join(",")))
+        //         .collect::<Vec<String>>()
+        //         .join("\n"),
+        // )?;
+        Ok(dotfile)
     }
 }
 pub struct NewFile {
@@ -36,7 +122,7 @@ pub struct NewFile {
 }
 
 impl NewFile {
-    pub fn new(&self, db: &Db) -> Result<File> {
+    pub fn save(&self, db: &Db) -> Result<File, FownerError> {
         if let Ok(file) = File::load_by_path(self.project_id, self.path.clone(), db) {
             return Ok(file);
         };
@@ -55,6 +141,10 @@ impl<'stmt> From<&Row<'stmt>> for File {
             path: row.get(2).unwrap(),
             created_at: NaiveDateTime::from_timestamp(row.get(3).unwrap(), 0),
             updated_at: NaiveDateTime::from_timestamp(row.get(4).unwrap(), 0),
+            feature_names: row
+                .get(5)
+                .map(|s: String| s.split(',').map(|s| s.to_string()).collect())
+                .unwrap_or_default(),
         }
     }
 }

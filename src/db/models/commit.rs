@@ -20,7 +20,7 @@ pub struct NewCommit {
 }
 
 impl NewCommit {
-    pub fn new(&self, db: &Db) -> Result<Commit> {
+    pub fn save(&self, db: &Db) -> Result<Commit> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("INSERT INTO commits (project_id, sha, description, commit_time, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, strftime('%s','now'), strftime('%s','now'))")?;
         let _res = stmt.execute(params![
@@ -41,14 +41,14 @@ impl Commit {
         let result = results
             .next()?
             .map(Commit::from)
-            .ok_or(anyhow!("Failed to fetch commit"))?;
+            .ok_or_else(|| anyhow!("Failed to fetch commit"))?;
         Ok(result)
     }
     pub fn fetch_latest_for_project(project_id: u32, db: &Db) -> Result<Self> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT id, project_id, sha, description, commit_time, created_at, updated_at FROM commits WHERE project_id = ?1 ORDER BY commit_time DESC LIMIT 1;")?;
         let mut results = stmt.query(params![project_id])?;
-        while let Some(row) = results.next()? {
+        if let Some(row) = results.next()? {
             return Ok(Commit::from(row));
         }
         Err(anyhow::anyhow!("No commits found"))

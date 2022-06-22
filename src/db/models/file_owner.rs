@@ -1,8 +1,9 @@
+use crate::errors::FownerError;
 use crate::Db;
-use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FileOwner {
     pub file_id: u32,
@@ -26,7 +27,7 @@ impl FileOwner {
         owner_id: Option<u32>,
         action_date: Option<NaiveDateTime>,
         db: &Db,
-    ) -> Result<Vec<FileOwner>> {
+    ) -> Result<Vec<FileOwner>, FownerError> {
         let conn = db.pool.get()?;
         let mut result = vec![];
         let mut stmt = conn.prepare("SELECT file_id, owner_id, action_date, sha, created_at, updated_at FROM file_owners WHERE file_id = ?1 AND (?2 IS NULL OR owner_id = ?2) AND (?3 IS NULL or action_date = ?3) ORDER BY action_date DESC")?;
@@ -56,7 +57,7 @@ impl<'stmt> From<&Row<'stmt>> for FileOwner {
 }
 
 impl NewFileOwner {
-    pub fn new(&self, db: &Db) -> Result<FileOwner> {
+    pub fn save(&self, db: &Db) -> Result<FileOwner, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("INSERT INTO file_owners (file_id, owner_id, action_date, sha, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, strftime('%s','now'), strftime('%s','now'))")?;
         let _res = stmt.execute(params![
@@ -71,9 +72,6 @@ impl NewFileOwner {
             Some(self.action_date),
             db,
         )?;
-        file_owner
-            .first()
-            .cloned()
-            .ok_or(anyhow!("Could not find file owner"))
+        file_owner.first().cloned().ok_or(FownerError::NotFound)
     }
 }
