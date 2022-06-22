@@ -1,12 +1,16 @@
 use std::path::PathBuf;
+mod controllers;
 mod db;
+mod errors;
 mod git;
+
 extern crate log;
 use crate::db::models::file::File;
 use crate::db::models::project::Project;
 use crate::db::processor::Processor;
 use crate::db::Db;
 use crate::git::repo::GitRepo;
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
@@ -40,9 +44,12 @@ enum Commands {
         #[clap(short, long)]
         filepath: PathBuf,
     },
+    Serve,
     Migrate,
 }
-fn main() -> Result<()> {
+
+#[actix_web::main]
+async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
     let cli = Cli::parse();
     let db = Db::new(&cli.database_path)?;
@@ -76,6 +83,7 @@ fn main() -> Result<()> {
             eprintln!("{}", serde_json::to_string(&owners)?);
         }
         Commands::Migrate => db.init()?,
+        Commands::Serve => controllers::Server::start(db).await?,
     }
 
     Ok(())

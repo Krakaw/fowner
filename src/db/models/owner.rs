@@ -1,5 +1,6 @@
+use crate::errors::FownerError;
+use crate::errors::FownerError::NotFound;
 use crate::Db;
-use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
@@ -20,20 +21,32 @@ pub struct NewOwner {
 }
 
 impl Owner {
-    pub fn load_by_handle(handle: String, db: &Db) -> Result<Self> {
+    pub fn search_by_handle(handle: String, db: &Db) -> Result<Vec<Owner>, FownerError> {
+        let conn = db.pool.get()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, handle, name, created_at, updated_at FROM owners WHERE handle LIKE ?1;",
+        )?;
+        let mut rows = stmt.query_map(params![format!("%{}%", handle)], |r| Ok(Owner::from(r)))?;
+        let mut result = vec![];
+        for row in rows {
+            result.push(row?);
+        }
+        Ok(result)
+    }
+    pub fn load_by_handle(handle: String, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT id, handle, name, created_at, updated_at FROM owners WHERE LOWER(handle) = LOWER(?1);")?;
         let mut rows = stmt.query(params![handle])?;
         if let Some(row) = rows.next()? {
             Ok(Owner::from(row))
         } else {
-            Err(anyhow!("Owner not found"))
+            Err(NotFound)
         }
     }
 }
 
 impl NewOwner {
-    pub fn new(&self, db: &Db) -> Result<Owner> {
+    pub fn new(&self, db: &Db) -> Result<Owner, FownerError> {
         if let Ok(owner) = Owner::load_by_handle(self.handle.clone(), db) {
             return Ok(owner);
         };
