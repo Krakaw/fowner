@@ -77,16 +77,13 @@ async fn main() -> Result<(), anyhow::Error> {
             // Fetch the commits from the local repository and insert the required records
             // Projects, Owners, Files, Commits, File Owners
             let _ = processor.fetch_commits_and_update_db()?;
-            // TODO: Come up with a solution for matching features with files (I'm thinking a dotfile in the repo)
-
-            // let history = db.store_history(repo, since.clone())?;
-
-            // eprintln!("{}", serde_json::to_string(&history)?);
         }
         Commands::GenerateDotfile { filepath, dotfile } => {
             let project = Project::load_by_path(filepath, &db)?;
             let dotfile_path = filepath.join(dotfile);
-            let _path = File::generate_feature_file(project.id, dotfile_path, &db)?;
+            let path = File::generate_feature_file(project.id, dotfile_path, &db)?;
+
+            eprintln!("dotfile path = {}", path.canonicalize()?.to_string_lossy());
         }
         Commands::FileOwners { filepath, name } => {
             let project = Project::load_by_path(filepath, &db)?;

@@ -121,9 +121,6 @@ impl File {
                 .save(db)?;
                 db_file.add_feature(feature.id, db)?;
             }
-
-            // Then check if the db has any features that aren't in the local file list
-            // If the features are at parity remove the item from the `files` Vec
         }
         let files = Self::all(project_id, db)?;
         std::fs::write(
