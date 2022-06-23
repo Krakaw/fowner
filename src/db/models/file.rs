@@ -1,4 +1,5 @@
 use crate::db::models::feature::NewFeature;
+use crate::db::models::file_feature::{FileFeature, NewFileFeature};
 use crate::db::models::file_owner::FileOwner;
 use crate::errors::FownerError;
 use crate::Db;
@@ -6,7 +7,7 @@ use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use std::path::PathBuf;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct File {
     pub id: u32,
     pub project_id: u32,
@@ -24,7 +25,7 @@ impl File {
         FROM files f
                  LEFT JOIN file_features ff on f.id = ff.file_id
                  LEFT JOIN features fe on ff.feature_id = fe.id
-        WHERE project_id = ?1
+        WHERE f.project_id = ?1
         {}
         GROUP BY f.id;
         "#,
@@ -58,6 +59,14 @@ impl File {
         FileOwner::load(self.id, None, None, db)
     }
 
+    pub fn add_feature(&self, feature_id: u32, db: &Db) -> Result<FileFeature, FownerError> {
+        NewFileFeature {
+            file_id: self.id,
+            feature_id,
+        }
+        .save(db)
+    }
+
     pub fn generate_feature_file(
         project_id: u32,
         dotfile: PathBuf,
@@ -89,30 +98,42 @@ impl File {
             })
             .collect::<Vec<(&str, Vec<&str>)>>();
 
-        let _files = Self::all(project_id, db)?;
+        let files = Self::all(project_id, db)?;
         for existing_row in existing_path_features {
+            let db_file =
+                if let Some(db_file) = files.iter().find(|r| r.path == existing_row.0).cloned() {
+                    db_file
+                } else {
+                    // Create the file
+                    NewFile {
+                        project_id,
+                        path: existing_row.0.to_string(),
+                    }
+                    .save(db)?
+                };
             for feature_str in existing_row.1 {
                 // Check if the features exist, if not create them and attach them to the File
-                let _feature = NewFeature {
+                let feature = NewFeature {
                     project_id,
                     name: feature_str.to_string(),
                     description: None,
                 }
                 .save(db)?;
+                db_file.add_feature(feature.id, db)?;
             }
 
             // Then check if the db has any features that aren't in the local file list
             // If the features are at parity remove the item from the `files` Vec
         }
-        // let files = Self::all(project_id, db)?;
-        // std::fs::write(
-        //     dotfile.clone(),
-        //     files
-        //         .iter()
-        //         .map(|r| format!("{}|{}", r.path.clone(), r.feature_names.join(",")))
-        //         .collect::<Vec<String>>()
-        //         .join("\n"),
-        // )?;
+        let files = Self::all(project_id, db)?;
+        std::fs::write(
+            dotfile.clone(),
+            files
+                .iter()
+                .map(|r| format!("{}|{}", r.path.clone(), r.feature_names.join(",")))
+                .collect::<Vec<String>>()
+                .join("\n"),
+        )?;
         Ok(dotfile)
     }
 }

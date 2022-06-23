@@ -60,6 +60,9 @@ pub fn migrations() -> Vec<&'static str> {
             );
         "#,
         r#"
+            CREATE UNIQUE INDEX idx_feature_files_file_id_feature_id ON file_features (file_id, feature_id);
+        "#,
+        r#"
             CREATE TABLE IF NOT EXISTS owners
             (
                 id            INTEGER  PRIMARY KEY AUTOINCREMENT,
