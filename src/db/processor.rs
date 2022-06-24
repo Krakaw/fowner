@@ -1,6 +1,8 @@
 use crate::db::models::commit::{Commit, NewCommit};
+use crate::db::models::feature::NewFeature;
 use crate::db::models::file::NewFile;
 use crate::db::models::file_commit::FileCommit;
+use crate::db::models::file_feature::NewFileFeature;
 use crate::db::models::file_owner::NewFileOwner;
 use crate::db::models::owner::NewOwner;
 use crate::db::models::project::{NewProject, Project};
@@ -48,7 +50,19 @@ impl<'a> Processor<'a> {
                 commit_time: commit_date,
             }
             .save(self.db)?;
-            // 3a. We need to extract all of the files and create a new File entry for each that is linked to the project
+            // 3. Create the features
+            let mut features = vec![];
+            for feature in git_history.features {
+                features.push(
+                    NewFeature {
+                        project_id,
+                        name: feature,
+                        description: None,
+                    }
+                    .save(self.db)?,
+                );
+            }
+            // 4a. We need to extract all of the files and create a new File entry for each that is linked to the project
             for file_path in git_history.files {
                 let file = NewFile {
                     project_id: project.id,
@@ -56,7 +70,7 @@ impl<'a> Processor<'a> {
                 }
                 .save(self.db)?;
 
-                // 3b. We need to create a FileOwner for each file
+                // 4b. We need to create a FileOwner for each file
                 NewFileOwner {
                     sha: sha.clone(),
                     file_id: file.id,
@@ -65,12 +79,21 @@ impl<'a> Processor<'a> {
                 }
                 .save(self.db)?;
 
-                // 3c. We create a FileCommit link for every file
+                // 4c. We create a FileCommit link for every file
                 FileCommit {
                     file_id: file.id,
                     commit_id: commit.id,
                 }
                 .save(self.db)?;
+
+                // 4d. Attach the features to the files
+                for feature in &features {
+                    NewFileFeature {
+                        file_id: file.id,
+                        feature_id: feature.id,
+                    }
+                    .save(self.db)?;
+                }
             }
         }
         Ok(())

@@ -35,6 +35,9 @@ enum Commands {
         /// Git repo url
         #[clap(short, long)]
         repo_url: Option<String>,
+        /// Do not save history in DB
+        #[clap(short, long)]
+        bypass_save: bool,
     },
     FileOwners {
         /// File name
@@ -67,6 +70,7 @@ async fn main() -> Result<(), anyhow::Error> {
             filepath,
             name,
             repo_url,
+            bypass_save,
         } => {
             let repo = GitRepo {
                 path: filepath.clone(),
@@ -76,7 +80,14 @@ async fn main() -> Result<(), anyhow::Error> {
             let mut processor = Processor::new(repo, &db)?;
             // Fetch the commits from the local repository and insert the required records
             // Projects, Owners, Files, Commits, File Owners
-            let _ = processor.fetch_commits_and_update_db()?;
+            if *bypass_save {
+                eprintln!(
+                    "processor.repo.parse(None) = {:?}",
+                    processor.repo.parse(None)
+                );
+            } else {
+                let _ = processor.fetch_commits_and_update_db()?;
+            }
         }
         Commands::GenerateDotfile { filepath, dotfile } => {
             let project = Project::load_by_path(filepath, &db)?;

@@ -47,7 +47,8 @@ impl GitRepo {
         let s = String::from_utf8(result.stdout)?;
         let mut row = GitHistory::default();
         let mut state = GitState::Handle;
-        let re = Regex::new("\\[([\\w_-]+)\\]$")?;
+        // Extracts features from an appended [Feature,Feature] list in the commit message
+        let re = Regex::new(r"\[([\w,]+)\]$")?;
 
         for line in s.split('\n') {
             let line = line.to_string();
@@ -80,7 +81,7 @@ impl GitRepo {
                     row.summary = line.clone();
                     if let Some(captures) = re.captures(&line) {
                         let features = captures
-                            .get(0)
+                            .get(1)
                             .map(|r| r.as_str().split(",").collect())
                             .unwrap_or_else(|| vec![])
                             .iter()
