@@ -1,5 +1,6 @@
 use crate::db::models::commit::{Commit, NewCommit};
 use crate::db::models::file::NewFile;
+use crate::db::models::file_commit::FileCommit;
 use crate::db::models::file_owner::NewFileOwner;
 use crate::db::models::owner::NewOwner;
 use crate::db::models::project::{NewProject, Project};
@@ -40,7 +41,7 @@ impl<'a> Processor<'a> {
             // 2. We need to create a Commit for the hash
             let commit_date = NaiveDateTime::from_timestamp(git_history.timestamp as i64, 0);
             let sha = git_history.hash.clone();
-            NewCommit {
+            let commit = NewCommit {
                 project_id,
                 sha: sha.clone(),
                 description: git_history.summary.clone(),
@@ -55,12 +56,19 @@ impl<'a> Processor<'a> {
                 }
                 .save(self.db)?;
 
-                // 2c. We need to create a FileOwner for each file
+                // 3b. We need to create a FileOwner for each file
                 NewFileOwner {
                     sha: sha.clone(),
                     file_id: file.id,
                     owner_id: owner.id,
                     action_date: commit_date,
+                }
+                .save(self.db)?;
+
+                // 3c. We create a FileCommit link for every file
+                FileCommit {
+                    file_id: file.id,
+                    commit_id: commit.id,
                 }
                 .save(self.db)?;
             }

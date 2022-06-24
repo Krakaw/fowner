@@ -83,5 +83,15 @@ pub fn migrations() -> Vec<&'static str> {
                 updated_at      INT  NOT NULL
             );
         "#,
+        r#"
+            CREATE TABLE IF NOT EXISTS file_commits
+            (
+                file_id     INTEGER,
+                commit_id   INTEGER
+            );
+        "#,
+        r#"
+            CREATE UNIQUE INDEX idx_file_commits_file_id_commit_id ON file_commits (file_id, commit_id);
+        "#,
     ]
 }
