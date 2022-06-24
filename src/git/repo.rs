@@ -11,6 +11,7 @@ pub struct GitRepo {
     pub url: Option<String>,
 }
 
+#[derive(PartialEq)]
 enum GitState {
     Handle,
     Hash,
@@ -26,7 +27,7 @@ impl GitRepo {
             "--no-pager".to_string(),
             "log".to_string(),
             "--name-only".to_string(),
-            "--pretty=format:%an%n%h%n%ad%n%s".to_string(),
+            "--pretty=format:---%n%an%n%h%n%ad%n%s".to_string(),
             "--date=unix".to_string(),
         ];
 
@@ -52,11 +53,21 @@ impl GitRepo {
         };
         let mut state = GitState::Handle;
 
-        for i in s.split('\n') {
+        for line in s.split('\n') {
+            let line = line.to_string();
+            if line == "---" {
+                // This pattern denotes the start of a new record
+                if state == GitState::Files {
+                    history.push(row.clone());
+                    state = GitState::Handle;
+                }
+                continue;
+            }
+
             match state {
                 GitState::Handle => {
                     row = GitHistory {
-                        handle: i.to_string(),
+                        handle: line,
                         hash: "".to_string(),
                         timestamp: 0,
                         summary: "".to_string(),
@@ -65,23 +76,23 @@ impl GitRepo {
                     state = GitState::Hash;
                 }
                 GitState::Hash => {
-                    row.hash = i.to_string();
+                    row.hash = line;
                     state = GitState::Timestamp;
                 }
                 GitState::Timestamp => {
-                    row.timestamp = usize::from_str(i)?;
+                    row.timestamp = usize::from_str(&line)?;
                     state = GitState::Summary;
                 }
                 GitState::Summary => {
-                    row.summary = i.to_string();
+                    row.summary = line;
                     state = GitState::Files;
                 }
                 GitState::Files => {
-                    if i.is_empty() {
+                    if line.is_empty() {
                         state = GitState::Handle;
                         history.push(row.clone());
                     } else {
-                        row.files.push(i.to_string());
+                        row.files.push(line.to_string());
                     }
                 }
             }

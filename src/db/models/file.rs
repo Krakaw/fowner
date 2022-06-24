@@ -122,7 +122,8 @@ impl File {
                 db_file.add_feature(feature.id, db)?;
             }
         }
-        let files = Self::all(project_id, db)?;
+        let mut files = Self::all(project_id, db)?;
+        files.sort_by(|a, b| a.path.cmp(&b.path));
         std::fs::write(
             dotfile.clone(),
             files

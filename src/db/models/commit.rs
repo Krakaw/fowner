@@ -12,6 +12,7 @@ pub struct Commit {
     pub updated_at: NaiveDateTime,
 }
 
+#[derive(Debug)]
 pub struct NewCommit {
     pub project_id: u32,
     pub sha: String,
@@ -23,12 +24,18 @@ impl NewCommit {
     pub fn save(&self, db: &Db) -> Result<Commit> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("INSERT INTO commits (project_id, sha, description, commit_time, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, strftime('%s','now'), strftime('%s','now'))")?;
-        let _res = stmt.execute(params![
-            self.project_id,
-            self.sha,
-            self.description,
-            self.commit_time.timestamp()
-        ])?;
+        let _res = stmt
+            .execute(params![
+                self.project_id,
+                self.sha,
+                self.description,
+                self.commit_time.timestamp()
+            ])
+            .map_err(|e| {
+                eprintln!("e = {:?}", e);
+                eprintln!("self = {:?}", self);
+                e
+            })?;
         let id = conn.last_insert_rowid();
         Commit::load(id, db)
     }
