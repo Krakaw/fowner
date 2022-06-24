@@ -1,6 +1,7 @@
 use crate::git::history::GitHistory;
 use anyhow::{anyhow, Result};
 use chrono::NaiveDateTime;
+use regex::Regex;
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
@@ -44,14 +45,9 @@ impl GitRepo {
             return Err(anyhow!(String::from_utf8(result.stderr)?));
         }
         let s = String::from_utf8(result.stdout)?;
-        let mut row = GitHistory {
-            handle: "".to_string(),
-            hash: "".to_string(),
-            timestamp: 0,
-            summary: "".to_string(),
-            files: vec![],
-        };
+        let mut row = GitHistory::default();
         let mut state = GitState::Handle;
+        let re = Regex::new("\\[([\\w_-]+)\\]$")?;
 
         for line in s.split('\n') {
             let line = line.to_string();
@@ -68,10 +64,7 @@ impl GitRepo {
                 GitState::Handle => {
                     row = GitHistory {
                         handle: line,
-                        hash: "".to_string(),
-                        timestamp: 0,
-                        summary: "".to_string(),
-                        files: vec![],
+                        ..GitHistory::default()
                     };
                     state = GitState::Hash;
                 }
@@ -84,7 +77,17 @@ impl GitRepo {
                     state = GitState::Summary;
                 }
                 GitState::Summary => {
-                    row.summary = line;
+                    row.summary = line.clone();
+                    if let Some(captures) = re.captures(&line) {
+                        let features = captures
+                            .get(0)
+                            .map(|r| r.as_str().split(",").collect())
+                            .unwrap_or_else(|| vec![])
+                            .iter()
+                            .map(|s| s.to_string())
+                            .collect::<Vec<String>>();
+                        row.features = features;
+                    }
                     state = GitState::Files;
                 }
                 GitState::Files => {
