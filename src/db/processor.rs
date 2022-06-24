@@ -9,6 +9,7 @@ use crate::db::models::project::{NewProject, Project};
 use crate::{Db, GitRepo};
 use anyhow::Result;
 use chrono::NaiveDateTime;
+use log::debug;
 
 pub struct Processor<'a> {
     pub db: &'a Db,
@@ -32,6 +33,7 @@ impl<'a> Processor<'a> {
         let history = self.repo.parse(latest_commit)?;
         let project = self.project.clone();
         let project_id = project.id;
+        debug!("{} new commits to process", history.len());
         for git_history in history {
             // For each GitHistory
             // 1. We need to create an Owner from the handle

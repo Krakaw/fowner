@@ -1,6 +1,7 @@
 use crate::git::history::GitHistory;
 use anyhow::{anyhow, Result};
-use chrono::NaiveDateTime;
+use chrono::{Duration, NaiveDateTime};
+use log::debug;
 use regex::Regex;
 use std::path::PathBuf;
 use std::process::Command;
@@ -33,7 +34,14 @@ impl GitRepo {
         ];
 
         if let Some(since) = since {
-            let after = format!("--after={}", since);
+            let after = format!(
+                "--after=\"{}\"",
+                since
+                    .checked_add_signed(Duration::seconds(1))
+                    .unwrap_or_else(|| since)
+                    .format("%Y-%m-%dT%H:%M:%S.0Z")
+            );
+            debug!("Fetching Commits After: {}", after);
             args.push(after);
         }
         let result = Command::new("git")
