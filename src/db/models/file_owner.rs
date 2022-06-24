@@ -72,6 +72,9 @@ impl NewFileOwner {
             Some(self.action_date),
             db,
         )?;
-        file_owner.first().cloned().ok_or(FownerError::NotFound)
+        file_owner
+            .first()
+            .cloned()
+            .ok_or(FownerError::NotFound("File Owner not found".to_string()))
     }
 }

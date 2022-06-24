@@ -1,5 +1,5 @@
+use crate::errors::FownerError;
 use crate::git::history::GitHistory;
-use anyhow::{anyhow, Result};
 use chrono::{Duration, NaiveDateTime};
 use log::debug;
 use regex::Regex;
@@ -23,7 +23,7 @@ enum GitState {
 }
 
 impl GitRepo {
-    pub fn parse(&self, since: Option<NaiveDateTime>) -> Result<Vec<GitHistory>> {
+    pub fn parse(&self, since: Option<NaiveDateTime>) -> Result<Vec<GitHistory>, FownerError> {
         let mut history = vec![];
         let mut args = vec![
             "--no-pager".to_string(),
@@ -50,7 +50,7 @@ impl GitRepo {
             .arg(".")
             .output()?;
         if !result.status.success() {
-            return Err(anyhow!(String::from_utf8(result.stderr)?));
+            return Err(FownerError::Execution(String::from_utf8(result.stderr)?));
         }
         let s = String::from_utf8(result.stdout)?;
         let mut row = GitHistory::default();

@@ -1,11 +1,11 @@
 pub mod owners;
 
 pub struct Server;
-use crate::Db;
+use crate::{Db, FownerError};
 use actix_web::{web, App, HttpServer};
 
 impl Server {
-    pub async fn start(db: Db) -> anyhow::Result<()> {
+    pub async fn start(db: Db) -> Result<(), FownerError> {
         HttpServer::new(move || {
             App::new()
                 .app_data(web::Data::new(db.clone()))

@@ -6,8 +6,8 @@ use crate::db::models::file_feature::NewFileFeature;
 use crate::db::models::file_owner::NewFileOwner;
 use crate::db::models::owner::NewOwner;
 use crate::db::models::project::{NewProject, Project};
+use crate::errors::FownerError;
 use crate::{Db, GitRepo};
-use anyhow::Result;
 use chrono::NaiveDateTime;
 use log::debug;
 
@@ -18,17 +18,17 @@ pub struct Processor<'a> {
 }
 
 impl<'a> Processor<'a> {
-    pub fn new(repo: GitRepo, db: &'a Db) -> Result<Self> {
+    pub fn new(repo: GitRepo, db: &'a Db) -> Result<Self, FownerError> {
         let project = NewProject::from(&repo).save(db)?;
         Ok(Processor { db, repo, project })
     }
 
-    pub fn fetch_commits_and_update_db(&mut self) -> Result<()> {
+    pub fn fetch_commits_and_update_db(&mut self) -> Result<(), FownerError> {
         let _ = self.fetch_history_and_store_data()?;
         Ok(())
     }
 
-    pub fn fetch_history_and_store_data(&mut self) -> Result<()> {
+    pub fn fetch_history_and_store_data(&mut self) -> Result<(), FownerError> {
         let latest_commit = self.get_most_recent_commit();
         let history = self.repo.parse(latest_commit)?;
         let project = self.project.clone();

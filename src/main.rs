@@ -11,7 +11,7 @@ use crate::db::processor::Processor;
 use crate::db::Db;
 use crate::git::repo::GitRepo;
 
-use anyhow::Result;
+use crate::errors::FownerError;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -60,7 +60,7 @@ enum Commands {
 }
 
 #[actix_web::main]
-async fn main() -> Result<(), anyhow::Error> {
+async fn main() -> Result<(), FownerError> {
     env_logger::init();
     let cli = Cli::parse();
     let db = Db::new(&cli.database_path)?;

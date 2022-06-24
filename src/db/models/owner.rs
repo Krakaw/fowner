@@ -40,7 +40,7 @@ impl Owner {
         if let Some(row) = rows.next()? {
             Ok(Owner::from(row))
         } else {
-            Err(NotFound)
+            Err(NotFound("Owner not found".to_string()))
         }
     }
 }

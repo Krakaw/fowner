@@ -51,7 +51,7 @@ impl File {
         if let Some(row) = rows.next()? {
             Ok(File::from(row))
         } else {
-            Err(FownerError::NotFound)
+            Err(FownerError::NotFound("File not found".to_string()))
         }
     }
 

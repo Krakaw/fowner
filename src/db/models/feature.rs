@@ -51,7 +51,7 @@ impl Feature {
         if let Some(row) = rows.next()? {
             Ok(Feature::from(row))
         } else {
-            Err(FownerError::NotFound)
+            Err(FownerError::NotFound("Feature not found".to_string()))
         }
     }
     pub fn load_by_name(project_id: u32, name: String, db: &Db) -> Result<Feature, FownerError> {
@@ -63,7 +63,7 @@ impl Feature {
         if let Some(row) = rows.next()? {
             Ok(Feature::from(row))
         } else {
-            Err(FownerError::NotFound)
+            Err(FownerError::NotFound("Feature not found".to_string()))
         }
     }
 }

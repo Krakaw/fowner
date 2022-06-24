@@ -24,7 +24,7 @@ impl FileFeature {
         if let Some(row) = rows.next()? {
             Ok(FileFeature::from(row))
         } else {
-            Err(FownerError::NotFound)
+            Err(FownerError::NotFound("File Feature not found".to_string()))
         }
     }
 }
