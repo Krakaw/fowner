@@ -38,7 +38,7 @@ impl GitRepo {
                 "--after=\"{}\"",
                 since
                     .checked_add_signed(Duration::seconds(1))
-                    .unwrap_or_else(|| since)
+                    .unwrap_or(since)
                     .format("%Y-%m-%dT%H:%M:%S.0Z")
             );
             debug!("Fetching Commits After: {}", after);
@@ -90,8 +90,8 @@ impl GitRepo {
                     if let Some(captures) = re.captures(&line) {
                         let features = captures
                             .get(1)
-                            .map(|r| r.as_str().split(",").collect())
-                            .unwrap_or_else(|| vec![])
+                            .map(|r| r.as_str().split(',').collect())
+                            .unwrap_or_else(Vec::new)
                             .iter()
                             .map(|s| s.to_string())
                             .collect::<Vec<String>>();

@@ -75,6 +75,6 @@ impl NewFileOwner {
         file_owner
             .first()
             .cloned()
-            .ok_or(FownerError::NotFound("File Owner not found".to_string()))
+            .ok_or_else(|| FownerError::NotFound("File Owner not found".to_string()))
     }
 }
