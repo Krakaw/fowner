@@ -23,6 +23,9 @@ enum GitState {
 }
 
 impl GitRepo {
+    /// Parse the git log output and return GitHistory
+    /// The history is chronological ASC
+    /// If `since` is passed in it only takes commits 1 second AFTER that datetime
     pub fn parse(&self, since: Option<NaiveDateTime>) -> Result<Vec<GitHistory>, FownerError> {
         let mut history = vec![];
         let mut args = vec![
@@ -60,7 +63,7 @@ impl GitRepo {
         let re = Regex::new(r"\[([\w,]+)\]$")?;
 
         for line in s.split('\n') {
-            let line = line.to_string();
+            let line = line.trim().to_string();
             if line == "---" {
                 // This pattern denotes the start of a new record
                 if state == GitState::Files {

@@ -1,5 +1,6 @@
+use crate::db::models::commit::Commit;
 use crate::errors::FownerError;
-use crate::Db;
+use crate::{Db, File};
 use r2d2_sqlite::rusqlite::params;
 
 #[derive(Clone)]
@@ -15,5 +16,22 @@ impl FileCommit {
         let mut stmt = conn.prepare(sql)?;
         let _res = stmt.execute(params![self.file_id, self.commit_id,])?;
         Ok(self.clone())
+    }
+
+    pub fn fetch_between(
+        from_commit: Commit,
+        to_commit: Commit,
+        db: &Db,
+    ) -> Result<Vec<File>, FownerError> {
+        let sql = r#"
+        SELECT *
+        FROM commits c
+                 LEFT JOIN file_commits fc ON fc.commit_id = c.id
+                 LEFT JOIN file_features ff ON ff.file_id = fc.file_id
+                 LEFT JOIN files f ON f.id = ff.file_id
+        WHERE c.commit_time BETWEEN ?1 AND ?2
+          AND c.project_id = ?3;
+          "#;
+        Ok(vec![])
     }
 }

@@ -2,7 +2,9 @@ use crate::errors::FownerError;
 use crate::Db;
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Feature {
     pub id: u32,
     pub project_id: u32,

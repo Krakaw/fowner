@@ -1,5 +1,7 @@
+use crate::db::models::commit::Commit;
+use crate::db::models::feature::Feature;
 use crate::errors::FownerError;
-use crate::Db;
+use crate::{Db, File};
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 
@@ -26,6 +28,38 @@ impl FileFeature {
         } else {
             Err(FownerError::NotFound("File Feature not found".to_string()))
         }
+    }
+
+    pub fn fetch_between(
+        from_commit: Commit,
+        to_commit: Commit,
+        db: &Db,
+    ) -> Result<Vec<Feature>, FownerError> {
+        let sql = r#"
+        SELECT f.*
+        FROM commits c
+                 INNER JOIN file_commits fc ON fc.commit_id = c.id
+                 INNER JOIN file_features ff ON ff.file_id = fc.file_id
+                 INNER JOIN features f ON f.id = ff.feature_id
+        WHERE c.commit_time BETWEEN ?1 AND ?2
+          AND c.project_id = ?3
+        GROUP BY f.id;
+          "#;
+        let conn = db.pool.get()?;
+        let mut stmt = conn.prepare(sql)?;
+        let rows = stmt.query_map(
+            params![
+                from_commit.commit_time.timestamp(),
+                to_commit.commit_time.timestamp(),
+                from_commit.project_id
+            ],
+            |r| Ok(Feature::from(r)),
+        )?;
+        let mut result = vec![];
+        for row in rows {
+            result.push(row?)
+        }
+        Ok(result)
     }
 }
 

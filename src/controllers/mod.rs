@@ -1,3 +1,4 @@
+pub mod features;
 pub mod owners;
 
 pub struct Server;
@@ -10,6 +11,10 @@ impl Server {
             App::new()
                 .app_data(web::Data::new(db.clone()))
                 .service(web::scope("/owners/{owner}").route("", web::get().to(owners::get_owners)))
+                .service(web::scope("/features").route(
+                    "/{from_commit}/{to_commit}",
+                    web::get().to(features::get_features_between_commits),
+                ))
         })
         .bind(("127.0.0.1", 8080))?
         .run()

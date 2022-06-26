@@ -36,9 +36,22 @@ impl NewCommit {
     }
 }
 impl Commit {
+    fn sql(where_clause: String) -> String {
+        format!("SELECT id, project_id, sha, description, commit_time, created_at, updated_at FROM commits {}", where_clause)
+    }
+    pub fn load_by_sha(sha: String, db: &Db) -> Result<Self, FownerError> {
+        let conn = db.pool.get()?;
+        let mut stmt = conn.prepare(&Commit::sql("WHERE sha LIKE ?1;".to_string()))?;
+        let mut results = stmt.query(params![&format!("{}%", sha)])?;
+        let result = results.next()?.map(Commit::from).ok_or_else(|| {
+            FownerError::InvalidTypeMapping("Failed to convert commit".to_string())
+        })?;
+        Ok(result)
+    }
+
     pub fn load(id: i64, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare("SELECT id, project_id, sha, description, commit_time, created_at, updated_at FROM commits WHERE id = ?1;")?;
+        let mut stmt = conn.prepare(&Commit::sql("WHERE id = ?1;".to_string()))?;
         let mut results = stmt.query(params![id])?;
         let result = results.next()?.map(Commit::from).ok_or_else(|| {
             FownerError::InvalidTypeMapping("Failed to convert commit".to_string())
