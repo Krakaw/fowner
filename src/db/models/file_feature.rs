@@ -1,7 +1,7 @@
 use crate::db::models::commit::Commit;
 use crate::db::models::feature::Feature;
 use crate::errors::FownerError;
-use crate::{Db, File};
+use crate::Db;
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 

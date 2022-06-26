@@ -26,8 +26,8 @@ pub enum FownerError {
     JsonParse(#[from] serde_json::Error),
     #[error("HTTP Error: {0}")]
     ActixError(#[from] actix_web::Error),
-    #[error("Unknown error")]
-    Unknown,
+    // #[error("Unknown error")]
+    // Unknown,
 }
 
 impl actix_web::error::ResponseError for FownerError {}
