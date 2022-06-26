@@ -1,4 +1,5 @@
 use crate::db::models::commit::Commit;
+use crate::db::models::extract_first;
 use crate::db::models::feature::Feature;
 use crate::errors::FownerError;
 use crate::Db;
@@ -22,12 +23,9 @@ impl FileFeature {
         let sql = "SELECT file_id, feature_id, created_at, updated_at FROM file_features WHERE file_id = ?1 AND feature_id = ?2";
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(sql)?;
+
         let mut rows = stmt.query(params![file_id, feature_id])?;
-        if let Some(row) = rows.next()? {
-            Ok(FileFeature::from(row))
-        } else {
-            Err(FownerError::NotFound("File Feature not found".to_string()))
-        }
+        extract_first!(rows)
     }
 
     pub fn fetch_between(

@@ -1,3 +1,4 @@
+use crate::db::models::{extract_all, extract_first};
 use crate::errors::FownerError;
 use crate::Db;
 use chrono::NaiveDateTime;
@@ -50,11 +51,7 @@ impl Feature {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(&Feature::sql(Some("WHERE id = ?1".to_string())))?;
         let mut rows = stmt.query(params![id])?;
-        if let Some(row) = rows.next()? {
-            Ok(Feature::from(row))
-        } else {
-            Err(FownerError::NotFound("Feature not found".to_string()))
-        }
+        extract_first!(rows)
     }
     pub fn load_by_name(project_id: u32, name: String, db: &Db) -> Result<Feature, FownerError> {
         let conn = db.pool.get()?;
@@ -62,21 +59,12 @@ impl Feature {
             "WHERE project_id = ?1 AND name LIKE ?2".to_string(),
         )))?;
         let mut rows = stmt.query(params![project_id, name])?;
-        if let Some(row) = rows.next()? {
-            Ok(Feature::from(row))
-        } else {
-            Err(FownerError::NotFound("Feature not found".to_string()))
-        }
+        extract_first!(rows)
     }
     pub fn load_by_project(project_id: u32, db: &Db) -> Result<Vec<Feature>, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(&Feature::sql(Some("WHERE project_id = ?1;".to_string())))?;
-        let rows = stmt.query_map(params![project_id], |r| Ok(Feature::from(r)))?;
-        let mut result = vec![];
-        for row in rows {
-            result.push(row?)
-        }
-        Ok(result)
+        extract_all!(params![project_id], stmt)
     }
 }
 

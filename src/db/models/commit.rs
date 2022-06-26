@@ -1,3 +1,4 @@
+use crate::db::models::extract_first;
 use crate::errors::FownerError;
 use crate::Db;
 use chrono::NaiveDateTime;
@@ -42,30 +43,22 @@ impl Commit {
     pub fn load_by_sha(sha: String, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(&Commit::sql("WHERE sha LIKE ?1;".to_string()))?;
-        let mut results = stmt.query(params![&format!("{}%", sha)])?;
-        let result = results.next()?.map(Commit::from).ok_or_else(|| {
-            FownerError::InvalidTypeMapping("Failed to convert commit".to_string())
-        })?;
-        Ok(result)
+        let mut rows = stmt.query(params![&format!("{}%", sha)])?;
+        extract_first!(rows)
     }
 
     pub fn load(id: i64, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(&Commit::sql("WHERE id = ?1;".to_string()))?;
-        let mut results = stmt.query(params![id])?;
-        let result = results.next()?.map(Commit::from).ok_or_else(|| {
-            FownerError::InvalidTypeMapping("Failed to convert commit".to_string())
-        })?;
-        Ok(result)
+        let mut rows = stmt.query(params![id])?;
+        extract_first!(rows)
     }
     pub fn fetch_latest_for_project(project_id: u32, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT id, project_id, sha, description, commit_time, created_at, updated_at FROM commits WHERE project_id = ?1 ORDER BY commit_time DESC LIMIT 1;")?;
-        let mut results = stmt.query(params![project_id])?;
-        if let Some(row) = results.next()? {
-            return Ok(Commit::from(row));
-        }
-        Err(FownerError::NotFound("No commits found".to_string()))
+
+        let mut rows = stmt.query(params![project_id])?;
+        extract_first!(rows)
     }
 }
 

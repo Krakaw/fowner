@@ -1,3 +1,4 @@
+use crate::db::models::{extract_all, extract_first};
 use crate::errors::FownerError;
 use crate::errors::FownerError::NotFound;
 use crate::Db;
@@ -21,27 +22,19 @@ pub struct NewOwner {
 }
 
 impl Owner {
-    pub fn search_by_handle(handle: String, db: &Db) -> Result<Vec<Owner>, FownerError> {
+    pub fn search_by_handle(handle: String, db: &Db) -> Result<Vec<Self>, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(
             "SELECT id, handle, name, created_at, updated_at FROM owners WHERE handle LIKE ?1;",
         )?;
-        let rows = stmt.query_map(params![format!("%{}%", handle)], |r| Ok(Owner::from(r)))?;
-        let mut result = vec![];
-        for row in rows {
-            result.push(row?);
-        }
-        Ok(result)
+        extract_all!(params![format!("%{}%", handle)], stmt)
     }
+
     pub fn load_by_handle(handle: String, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT id, handle, name, created_at, updated_at FROM owners WHERE LOWER(handle) = LOWER(?1);")?;
         let mut rows = stmt.query(params![handle])?;
-        if let Some(row) = rows.next()? {
-            Ok(Owner::from(row))
-        } else {
-            Err(NotFound("Owner not found".to_string()))
-        }
+        extract_first!(rows)
     }
 }
 
