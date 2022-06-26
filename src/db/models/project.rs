@@ -35,6 +35,18 @@ impl NewProject {
 }
 
 impl Project {
+    pub fn load(id: u32, db: &Db) -> Result<Self, FownerError> {
+        let conn = db.pool.get()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, name, repo_url, path, created_at, updated_at FROM projects WHERE id = ?1;",
+        )?;
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            Ok(Project::from(row))
+        } else {
+            Err(FownerError::NotFound("Project not found".to_string()))
+        }
+    }
     pub fn load_by_path(path: &Path, db: &Db) -> Result<Self, FownerError> {
         let absolute = fs::canonicalize(path)?;
         let absolute = absolute.to_string_lossy();

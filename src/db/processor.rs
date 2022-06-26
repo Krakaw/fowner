@@ -23,17 +23,18 @@ impl<'a> Processor<'a> {
         Ok(Processor { db, repo, project })
     }
 
-    pub fn fetch_commits_and_update_db(&mut self) -> Result<(), FownerError> {
-        let _ = self.fetch_history_and_store_data()?;
-        Ok(())
+    pub fn fetch_commits_and_update_db(&mut self) -> Result<usize, FownerError> {
+        let number_of_commits = self.fetch_history_and_store_data()?;
+        Ok(number_of_commits)
     }
 
-    pub fn fetch_history_and_store_data(&mut self) -> Result<(), FownerError> {
+    pub fn fetch_history_and_store_data(&mut self) -> Result<usize, FownerError> {
         let latest_commit = self.get_most_recent_commit();
         let history = self.repo.parse(latest_commit)?;
         let project = self.project.clone();
         let project_id = project.id;
-        debug!("{} new commits to process", history.len());
+        let number_of_commits = history.len();
+        debug!("{} new commits to process", number_of_commits);
         for git_history in history {
             // For each GitHistory
             // 1. We need to create an Owner from the handle
@@ -98,7 +99,7 @@ impl<'a> Processor<'a> {
                 }
             }
         }
-        Ok(())
+        Ok(number_of_commits)
     }
 
     fn get_most_recent_commit(&self) -> Option<NaiveDateTime> {
