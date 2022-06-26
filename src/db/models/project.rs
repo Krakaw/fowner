@@ -1,7 +1,7 @@
 use crate::errors::FownerError;
 use crate::{Db, GitRepo};
 use chrono::NaiveDateTime;
-use r2d2_sqlite::rusqlite::{params, Row};
+use r2d2_sqlite::rusqlite::{params, MappedRows, Row, Rows};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -53,19 +53,20 @@ impl Project {
         let mut stmt = conn.prepare(
             "SELECT id, name, repo_url, path, created_at, updated_at FROM projects WHERE id = ?1;",
         )?;
-        let mut rows = stmt.query(params![id])?;
-        if let Some(row) = rows.next()? {
-            Ok(Project::from(row))
-        } else {
-            Err(FownerError::NotFound("Project not found".to_string()))
-        }
+        let rows = stmt.query(params![id])?;
+        Self::extract_first(rows)
     }
     pub fn load_by_path(path: &Path, db: &Db) -> Result<Self, FownerError> {
         let absolute = fs::canonicalize(path)?;
         let absolute = absolute.to_string_lossy();
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT id, name, repo_url, path, created_at, updated_at FROM projects WHERE LOWER(path) = LOWER(?);")?;
-        let mut rows = stmt.query(params![absolute])?;
+        let rows = stmt.query(params![absolute])?;
+        Self::extract_first(rows)
+    }
+
+    /// Extract the first result and return it, or error out
+    fn extract_first(mut rows: Rows) -> Result<Self, FownerError> {
         if let Some(row) = rows.next()? {
             Ok(Project::from(row))
         } else {
