@@ -68,6 +68,16 @@ impl Feature {
             Err(FownerError::NotFound("Feature not found".to_string()))
         }
     }
+    pub fn load_by_project(project_id: u32, db: &Db) -> Result<Vec<Feature>, FownerError> {
+        let conn = db.pool.get()?;
+        let mut stmt = conn.prepare(&Feature::sql(Some("WHERE project_id = ?1;".to_string())))?;
+        let rows = stmt.query_map(params![project_id], |r| Ok(Feature::from(r)))?;
+        let mut result = vec![];
+        for row in rows {
+            result.push(row?)
+        }
+        Ok(result)
+    }
 }
 
 impl<'stmt> From<&Row<'stmt>> for Feature {

@@ -2,10 +2,11 @@ use crate::errors::FownerError;
 use crate::{Db, GitRepo};
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Project {
     pub id: u32,
     pub name: Option<String>,
@@ -35,6 +36,18 @@ impl NewProject {
 }
 
 impl Project {
+    pub fn all(db: &Db) -> Result<Vec<Self>, FownerError> {
+        let conn = db.pool.get()?;
+        let mut stmt =
+            conn.prepare("SELECT id, name, repo_url, path, created_at, updated_at FROM projects;")?;
+        let rows = stmt.query_map(params![], |r| Ok(Project::from(r)))?;
+        let mut result = vec![];
+        for row in rows {
+            result.push(row?)
+        }
+        Ok(result)
+    }
+
     pub fn load(id: u32, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(

@@ -17,8 +17,13 @@ impl Server {
                 ))
                 .service(web::scope("/owners/{owner}").route("", web::get().to(owners::get_owners)))
                 .service(
-                    web::scope("/projects/{project_id}")
-                        .route("", web::put().to(projects::trigger_refresh)),
+                    web::scope("/projects")
+                        .route("", web::get().to(projects::all))
+                        .service(
+                            web::scope("/{project_id}")
+                                .route("", web::put().to(projects::trigger_refresh))
+                                .route("", web::get().to(projects::load)),
+                        ),
                 )
         })
         .bind(("127.0.0.1", 8080))?
