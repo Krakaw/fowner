@@ -23,7 +23,7 @@ pub async fn trigger_refresh(db: web::Data<Db>, path: web::Path<u32>) -> Result<
     let repo = GitRepo {
         path: project.path.clone().into(),
         name: project.name.clone(),
-        url: project.repo_url.clone(),
+        url: project.repo_url,
     };
     let mut processor = Processor::new(repo, &db)?;
     let number_of_commits = processor.fetch_commits_and_update_db()?;

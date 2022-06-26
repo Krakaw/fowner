@@ -108,3 +108,6 @@ impl<'a> Processor<'a> {
             .ok()
     }
 }
+
+#[cfg(test)]
+mod tests {}

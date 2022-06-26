@@ -3,6 +3,7 @@ mod controllers;
 mod db;
 mod errors;
 mod git;
+mod test;
 
 extern crate log;
 use crate::db::models::file::File;

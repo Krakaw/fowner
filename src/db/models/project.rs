@@ -2,7 +2,7 @@ use crate::db::models::{extract_all, extract_first};
 use crate::errors::FownerError;
 use crate::{Db, GitRepo};
 use chrono::NaiveDateTime;
-use r2d2_sqlite::rusqlite::{params, MappedRows, Row, Rows};
+use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -31,8 +31,9 @@ impl NewProject {
         let absolute = absolute.to_string_lossy();
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("INSERT INTO projects (name, repo_url, path, created_at, updated_at) VALUES (?, ?, ?, strftime('%s','now'), strftime('%s','now'))")?;
-        let _res = stmt.execute(params![self.name, self.repo_url, absolute,])?;
-        Project::load_by_path(&self.path, db)
+        let _res = stmt.execute(params![self.name, self.repo_url, absolute])?;
+        let id = conn.last_insert_rowid();
+        Project::load(id as u32, db)
     }
 }
 
@@ -85,3 +86,36 @@ impl From<&GitRepo> for NewProject {
         }
     }
 }
+//
+// #[cfg(test)]
+// mod tests {
+//     use crate::db::models::project::NewProject;
+//     use crate::test::tests::init;
+//     use crate::{Db, Project};
+//     use tempfile::TempDir;
+//
+//     fn add_project(db: &Db, tmp_dir: &TempDir, name: String) -> Project {
+//         let buf = tmp_dir.path().join(name.clone());
+//         std::fs::create_dir(buf.clone()).unwrap();
+//         NewProject {
+//             name: Some(name),
+//             repo_url: None,
+//             path: buf,
+//         }
+//         .save(db)
+//         .unwrap()
+//     }
+//
+//     #[test]
+//     fn all() {
+//         let (db, tmp_dir) = init();
+//         let p = Project::load(1, &db);
+//         let project1 = add_project(&db, &tmp_dir, "Project_1".to_string());
+//         eprintln!("project1 = {:?}", project1);
+//         // let project2 = add_project(&db, &tmp_dir, "Project_2".to_string());
+//         // eprintln!("project2 = {:?}", project2);
+//         let db_projects = Project::all(&db).unwrap();
+//         assert_eq!(db_projects.len(), 2);
+//     }
+//
+// }

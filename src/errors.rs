@@ -6,8 +6,6 @@ use thiserror::Error;
 pub enum FownerError {
     #[error("Not found: {0}")]
     NotFound(String),
-    #[error("Could not map type: {0}")]
-    InvalidTypeMapping(String),
     #[error("Error executing command: {0}")]
     Execution(String),
     #[error("Regex Error: {0}")]

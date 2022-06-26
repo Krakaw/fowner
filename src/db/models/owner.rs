@@ -1,6 +1,5 @@
 use crate::db::models::{extract_all, extract_first};
 use crate::errors::FownerError;
-use crate::errors::FownerError::NotFound;
 use crate::Db;
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
