@@ -1,7 +1,7 @@
 use crate::errors::FownerError;
 use crate::git::history::GitHistory;
 use chrono::{Duration, NaiveDateTime};
-use log::debug;
+use log::{debug, trace};
 use regex::Regex;
 use std::path::PathBuf;
 use std::process::Command;
@@ -29,7 +29,7 @@ impl GitRepo {
             "--no-pager".to_string(),
             "log".to_string(),
             "--name-only".to_string(),
-            "--pretty=format:---%n%an%n%h%n%ad%n%s".to_string(),
+            "--pretty=format:---%n%an%n%H%n%ad%n%s".to_string(),
             "--date=unix".to_string(),
         ];
 
@@ -44,6 +44,7 @@ impl GitRepo {
             debug!("Fetching Commits After: {}", after);
             args.push(after);
         }
+        trace!("git {}", args.join(" "));
         let result = Command::new("git")
             .current_dir(&self.path)
             .args(args)
@@ -109,6 +110,7 @@ impl GitRepo {
                 }
             }
         }
+        history.reverse();
         Ok(history)
     }
 }
