@@ -10,6 +10,7 @@ pub struct Owner {
     pub id: u32,
     pub handle: String,
     pub name: Option<String>,
+    pub primary_owner_id: Option<u32>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -24,14 +25,14 @@ impl Owner {
     pub fn search_by_handle(handle: String, db: &Db) -> Result<Vec<Self>, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(
-            "SELECT id, handle, name, created_at, updated_at FROM owners WHERE handle LIKE ?1;",
+            "SELECT id, handle, name, primary_owner_id, created_at, updated_at FROM owners WHERE handle LIKE ?1;",
         )?;
         extract_all!(params![format!("%{}%", handle)], stmt)
     }
 
     pub fn load_by_handle(handle: String, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare("SELECT id, handle, name, created_at, updated_at FROM owners WHERE LOWER(handle) = LOWER(?1);")?;
+        let mut stmt = conn.prepare("SELECT id, handle, name, primary_owner_id, created_at, updated_at FROM owners WHERE LOWER(handle) = LOWER(?1);")?;
         extract_first!(params![handle], stmt)
     }
 }
@@ -54,8 +55,9 @@ impl<'stmt> From<&Row<'stmt>> for Owner {
             id: row.get(0).unwrap(),
             handle: row.get(1).unwrap(),
             name: row.get(2).unwrap(),
-            created_at: NaiveDateTime::from_timestamp(row.get(3).unwrap(), 0),
-            updated_at: NaiveDateTime::from_timestamp(row.get(4).unwrap(), 0),
+            primary_owner_id: row.get(3).unwrap(),
+            created_at: NaiveDateTime::from_timestamp(row.get(4).unwrap(), 0),
+            updated_at: NaiveDateTime::from_timestamp(row.get(5).unwrap(), 0),
         }
     }
 }

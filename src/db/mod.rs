@@ -4,7 +4,6 @@ pub mod processor;
 
 use crate::FownerError;
 use r2d2::Pool;
-use r2d2_sqlite::rusqlite::params;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::path::Path;
 use std::sync::Arc;
@@ -26,7 +25,7 @@ impl Db {
         let connection = self.pool.get()?;
         let migrations = migrations::migrations();
         for migration in migrations {
-            connection.execute(migration, params![])?;
+            connection.execute_batch(migration)?;
         }
         Ok(())
     }

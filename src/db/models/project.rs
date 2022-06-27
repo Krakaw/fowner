@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Project {
     pub id: u32,
     pub name: Option<String>,
@@ -54,6 +54,7 @@ impl Project {
         extract_first!(params![id], stmt)
     }
 
+    /// Loads by an exact path match
     pub fn load_by_path(path: &Path, db: &Db) -> Result<Self, FownerError> {
         let absolute = fs::canonicalize(path)?;
         let absolute = absolute.to_string_lossy();
@@ -86,36 +87,58 @@ impl From<&GitRepo> for NewProject {
         }
     }
 }
-//
-// #[cfg(test)]
-// mod tests {
-//     use crate::db::models::project::NewProject;
-//     use crate::test::tests::init;
-//     use crate::{Db, Project};
-//     use tempfile::TempDir;
-//
-//     fn add_project(db: &Db, tmp_dir: &TempDir, name: String) -> Project {
-//         let buf = tmp_dir.path().join(name.clone());
-//         std::fs::create_dir(buf.clone()).unwrap();
-//         NewProject {
-//             name: Some(name),
-//             repo_url: None,
-//             path: buf,
-//         }
-//         .save(db)
-//         .unwrap()
-//     }
-//
-//     #[test]
-//     fn all() {
-//         let (db, tmp_dir) = init();
-//         let p = Project::load(1, &db);
-//         let project1 = add_project(&db, &tmp_dir, "Project_1".to_string());
-//         eprintln!("project1 = {:?}", project1);
-//         // let project2 = add_project(&db, &tmp_dir, "Project_2".to_string());
-//         // eprintln!("project2 = {:?}", project2);
-//         let db_projects = Project::all(&db).unwrap();
-//         assert_eq!(db_projects.len(), 2);
-//     }
-//
-// }
+
+#[cfg(test)]
+mod tests {
+    use crate::db::models::project::NewProject;
+    use crate::test::tests::init;
+    use crate::{Db, Project};
+    use std::path::Path;
+
+    fn add_project(db: &Db, tmp_dir: &Path, name: String) -> Project {
+        let buf = tmp_dir.join(&name);
+        if !buf.exists() {
+            std::fs::create_dir(buf.clone()).unwrap();
+        }
+
+        NewProject {
+            name: Some(name),
+            repo_url: None,
+            path: buf,
+        }
+        .save(db)
+        .unwrap()
+    }
+
+    #[test]
+    fn all() {
+        let (db, tmp_dir) = init();
+        let project1 = add_project(&db, &tmp_dir, "Project_1".to_string());
+        let project2 = add_project(&db, &tmp_dir, "Project_2".to_string());
+        let db_projects = Project::all(&db).unwrap();
+        assert_eq!(db_projects.len(), 2);
+        assert_eq!(project1, db_projects[0]);
+        assert_eq!(project2, db_projects[1]);
+    }
+
+    #[test]
+    fn load() {
+        let (db, tmp_dir) = init();
+        let _project1 = add_project(&db, &tmp_dir, "Project_1".to_string());
+        let project2 = add_project(&db, &tmp_dir, "Project_2".to_string());
+        let db_projects = Project::load(2, &db).unwrap();
+        assert_eq!(project2, db_projects);
+    }
+
+    #[test]
+    fn load_by_path() {
+        let (db, tmp_dir) = init();
+        let project1 = add_project(&db, &tmp_dir, "Project_1".to_string());
+        let _project2 = add_project(&db, &tmp_dir, "Project_2".to_string());
+        let db_projects = Project::load_by_path(tmp_dir.join("Project_1").as_path(), &db).unwrap();
+        assert_eq!(project1, db_projects);
+        // Load non existent
+        let not_found_db_projects = Project::load_by_path(tmp_dir.join("Project_x").as_path(), &db);
+        assert!(not_found_db_projects.is_err());
+    }
+}

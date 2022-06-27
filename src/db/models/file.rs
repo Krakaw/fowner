@@ -17,19 +17,28 @@ pub struct File {
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub feature_names: Vec<String>,
+    pub commits_shas: Vec<String>,
 }
 
 impl File {
     fn sql(where_clause: Option<String>) -> String {
         format!(
             r#"
-        SELECT f.id, f.project_id, f.path, f.created_at, f.updated_at, GROUP_CONCAT(fe.name, ',') AS feature_names
-        FROM files f
-                 LEFT JOIN file_features ff on f.id = ff.file_id
-                 LEFT JOIN features fe on ff.feature_id = fe.id
-        WHERE f.project_id = ?1
-        {}
-        GROUP BY f.id;
+            SELECT f.id,
+                   f.project_id,
+                   f.path,
+                   f.created_at,
+                   f.updated_at,
+                   GROUP_CONCAT(fe.name, ',') AS feature_names,
+                   GROUP_CONCAT(c.sha, ',')   AS commit_shas
+            FROM files f
+                     LEFT JOIN file_features ff on f.id = ff.file_id
+                     LEFT JOIN features fe on ff.feature_id = fe.id
+                     LEFT JOIN file_commits fc ON fc.file_id = f.id
+                     LEFT JOIN commits c ON fc.commit_id = c.id
+            WHERE f.project_id = ?1
+            {}
+            GROUP BY f.id;
         "#,
             where_clause.unwrap_or_default()
         )
@@ -145,14 +154,26 @@ impl NewFile {
 
 impl<'stmt> From<&Row<'stmt>> for File {
     fn from(row: &Row) -> Self {
+        let feature_name_raw: Vec<String> = row
+            .get(5)
+            .map(|s: String| s.split(',').map(|s| s.to_string()).collect())
+            .unwrap_or_default();
+        let mut feature_names = vec![];
+        for feature_name in feature_name_raw {
+            if !feature_names.contains(&feature_name) {
+                feature_names.push(feature_name);
+            }
+        }
+        feature_names.sort();
         Self {
             id: row.get(0).unwrap(),
             project_id: row.get(1).unwrap(),
             path: row.get(2).unwrap(),
             created_at: NaiveDateTime::from_timestamp(row.get(3).unwrap(), 0),
             updated_at: NaiveDateTime::from_timestamp(row.get(4).unwrap(), 0),
-            feature_names: row
-                .get(5)
+            feature_names,
+            commits_shas: row
+                .get(6)
                 .map(|s: String| s.split(',').map(|s| s.to_string()).collect())
                 .unwrap_or_default(),
         }

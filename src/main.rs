@@ -5,7 +5,9 @@ mod errors;
 mod git;
 mod test;
 
+extern crate core;
 extern crate log;
+
 use crate::db::models::file::File;
 use crate::db::models::project::Project;
 use crate::db::processor::Processor;

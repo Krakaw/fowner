@@ -65,11 +65,12 @@ pub fn migrations() -> Vec<&'static str> {
         r#"
             CREATE TABLE IF NOT EXISTS owners
             (
-                id            INTEGER  PRIMARY KEY AUTOINCREMENT,
-                handle        TEXT NOT NULL UNIQUE,
-                name          TEXT NULL,
-                created_at    INT  NOT NULL,
-                updated_at    INT  NOT NULL
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                handle           TEXT    NOT NULL UNIQUE,
+                name             TEXT    NULL,
+                primary_owner_id INTEGER NULL,
+                created_at       INT     NOT NULL,
+                updated_at       INT     NOT NULL
             );
         "#,
         r#"
