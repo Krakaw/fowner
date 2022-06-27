@@ -41,6 +41,7 @@ impl<'a> Processor<'a> {
             let owner = NewOwner {
                 handle: git_history.handle,
                 name: None,
+                primary_owner_id: None,
             }
             .save(self.db)?;
             // 2. We need to create a Commit for the hash

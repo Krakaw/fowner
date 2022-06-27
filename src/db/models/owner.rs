@@ -19,6 +19,13 @@ pub struct Owner {
 pub struct NewOwner {
     pub handle: String,
     pub name: Option<String>,
+    pub primary_owner_id: Option<u32>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct UpdateOwner {
+    pub name: Option<String>,
+    pub primary_owner_id: Option<u32>,
 }
 
 impl Owner {
@@ -30,10 +37,28 @@ impl Owner {
         extract_all!(params![format!("%{}%", handle)], stmt)
     }
 
+    pub fn load(id: u32, db: &Db) -> Result<Self, FownerError> {
+        let conn = db.pool.get()?;
+        let mut stmt = conn.prepare("SELECT id, handle, name, primary_owner_id, created_at, updated_at FROM owners WHERE id = ?1;")?;
+        extract_first!(params![id], stmt)
+    }
+
     pub fn load_by_handle(handle: String, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT id, handle, name, primary_owner_id, created_at, updated_at FROM owners WHERE LOWER(handle) = LOWER(?1);")?;
         extract_first!(params![handle], stmt)
+    }
+
+    pub fn update(self, update_details: UpdateOwner, db: &Db) -> Result<Self, FownerError> {
+        let conn = db.pool.get()?;
+        let mut stmt =
+            conn.prepare("UPDATE owners SET name = ?1, primary_owner_id = ?2 WHERE id = ?3")?;
+        let _res = stmt.execute(params![
+            update_details.name,
+            update_details.primary_owner_id,
+            self.id
+        ])?;
+        Self::load(self.id, db)
     }
 }
 
@@ -43,8 +68,8 @@ impl NewOwner {
             return Ok(owner);
         };
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare("INSERT INTO owners (handle, name, created_at, updated_at) VALUES (?1, ?2, strftime('%s','now'), strftime('%s','now'))")?;
-        let _res = stmt.execute(params![self.handle, self.name])?;
+        let mut stmt = conn.prepare("INSERT INTO owners (handle, name, primary_owner_id, created_at, updated_at) VALUES (?1, ?2, ?3, strftime('%s','now'), strftime('%s','now'))")?;
+        let _res = stmt.execute(params![self.handle, self.name, self.primary_owner_id])?;
         Owner::load_by_handle(self.handle.clone(), db)
     }
 }
