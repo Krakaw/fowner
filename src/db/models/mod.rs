@@ -6,14 +6,12 @@ pub mod file_feature;
 pub mod file_owner;
 pub mod owner;
 pub mod project;
-
+pub use crate::errors::FownerError;
 macro_rules! extract_first {
-    ($rows:expr) => {
-        if let Some(row) = $rows.next()? {
-            Ok(Self::from(row))
-        } else {
-            Err(FownerError::NotFound("Not found".to_string()))
-        }
+    ($params:expr,$stmt:expr) => {
+        $stmt
+            .query_row($params, |r| Ok(Self::from(r)))
+            .map_err(|e| FownerError::from(e))
     };
 }
 

@@ -32,8 +32,7 @@ impl Owner {
     pub fn load_by_handle(handle: String, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT id, handle, name, created_at, updated_at FROM owners WHERE LOWER(handle) = LOWER(?1);")?;
-        let mut rows = stmt.query(params![handle])?;
-        extract_first!(rows)
+        extract_first!(params![handle], stmt)
     }
 }
 

@@ -23,9 +23,7 @@ impl FileFeature {
         let sql = "SELECT file_id, feature_id, created_at, updated_at FROM file_features WHERE file_id = ?1 AND feature_id = ?2";
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(sql)?;
-
-        let mut rows = stmt.query(params![file_id, feature_id])?;
-        extract_first!(rows)
+        extract_first!(params![file_id, feature_id], stmt)
     }
 
     pub fn fetch_between(

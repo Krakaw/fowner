@@ -43,22 +43,18 @@ impl Commit {
     pub fn load_by_sha(sha: String, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(&Commit::sql("WHERE sha LIKE ?1;".to_string()))?;
-        let mut rows = stmt.query(params![&format!("{}%", sha)])?;
-        extract_first!(rows)
+        extract_first!(params![&format!("{}%", sha)], stmt)
     }
 
     pub fn load(id: i64, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(&Commit::sql("WHERE id = ?1;".to_string()))?;
-        let mut rows = stmt.query(params![id])?;
-        extract_first!(rows)
+        extract_first!(params![id], stmt)
     }
     pub fn fetch_latest_for_project(project_id: u32, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT id, project_id, sha, description, commit_time, created_at, updated_at FROM commits WHERE project_id = ?1 ORDER BY commit_time DESC LIMIT 1;")?;
-
-        let mut rows = stmt.query(params![project_id])?;
-        extract_first!(rows)
+        extract_first!(params![project_id], stmt)
     }
 }
 

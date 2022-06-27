@@ -50,8 +50,8 @@ impl Project {
         let mut stmt = conn.prepare(
             "SELECT id, name, repo_url, path, created_at, updated_at FROM projects WHERE id = ?1;",
         )?;
-        let mut rows = stmt.query(params![id])?;
-        extract_first!(rows)
+
+        extract_first!(params![id], stmt)
     }
 
     pub fn load_by_path(path: &Path, db: &Db) -> Result<Self, FownerError> {
@@ -59,8 +59,8 @@ impl Project {
         let absolute = absolute.to_string_lossy();
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT id, name, repo_url, path, created_at, updated_at FROM projects WHERE LOWER(path) = LOWER(?);")?;
-        let mut rows = stmt.query(params![absolute])?;
-        extract_first!(rows)
+        let rows = stmt.query_row(params![absolute], |r| Ok(Self::from(r)))?;
+        Ok(rows)
     }
 }
 

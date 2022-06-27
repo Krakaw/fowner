@@ -43,8 +43,7 @@ impl File {
     pub fn load_by_path(project_id: u32, path: String, db: &Db) -> Result<File, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(&File::sql(Some("AND path = ?2".to_string())))?;
-        let mut rows = stmt.query(params![project_id, path])?;
-        extract_first!(rows)
+        extract_first!(params![project_id, path], stmt)
     }
 
     pub fn get_owners(&self, db: &Db) -> Result<Vec<FileOwner>, FownerError> {
