@@ -27,7 +27,6 @@ jobs:
   test:
     needs: check
     name: Test Suite
-    runs-on: ubuntu-latest
     steps:
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
