@@ -3,12 +3,11 @@ pub mod builders;
 #[cfg(test)]
 pub mod tests {
     use crate::Db;
-    use chrono::Utc;
     use r2d2_sqlite::SqliteConnectionManager;
+    use rand::Rng;
     use std::env::temp_dir;
     use std::path::{Path, PathBuf};
     use std::sync::Arc;
-
     pub fn init() -> (Db, PathBuf) {
         let tmp_dir = temp_dir();
         (
@@ -16,7 +15,7 @@ pub mod tests {
                 tmp_dir
                     .join(format!(
                         "{}.db.sqlite",
-                        Utc::now().timestamp_subsec_micros()
+                        rand::thread_rng().gen_range(0..100_000_000)
                     ))
                     .as_path(),
             ),

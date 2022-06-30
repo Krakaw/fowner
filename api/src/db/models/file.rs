@@ -17,7 +17,8 @@ pub struct File {
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
     pub feature_names: Vec<String>,
-    pub commits_shas: Vec<String>,
+    pub commit_shas: Vec<String>,
+    pub owners: Vec<String>,
 }
 
 impl File {
@@ -29,13 +30,25 @@ impl File {
                    f.path,
                    f.created_at,
                    f.updated_at,
-                   GROUP_CONCAT(fe.name, ',') AS feature_names,
-                   GROUP_CONCAT(c.sha, ',')   AS commit_shas
+                    (SELECT GROUP_CONCAT(f2.name, ',')
+                    FROM file_features ff
+                             INNER JOIN features f2 on ff.feature_id = f2.id
+                    WHERE ff.file_id = f.id
+                    GROUP BY ff.file_id)                           AS feature_names,
+                   (SELECT GROUP_CONCAT(sha, ',')
+                    FROM file_commits fc
+                             INNER JOIN commits c on fc.commit_id = c.id
+                    WHERE fc.file_id = f.id
+                    GROUP BY fc.file_id)                           AS commit_shas,
+                   (SELECT GROUP_CONCAT(handle, ',')
+                    FROM (SELECT coalesce(po.handle, o.handle) AS handle
+                          FROM file_owners fo
+                                   INNER JOIN owners o on fo.owner_id = o.id
+                                   LEFT JOIN owners po ON po.id = o.primary_owner_id
+                          WHERE fo.file_id = f.id
+                          GROUP BY coalesce(po.handle, o.handle))) AS owners
+
             FROM files f
-                     LEFT JOIN file_features ff on f.id = ff.file_id
-                     LEFT JOIN features fe on ff.feature_id = fe.id
-                     LEFT JOIN file_commits fc ON fc.file_id = f.id
-                     LEFT JOIN commits c ON fc.commit_id = c.id
             WHERE f.project_id = ?1
             {}
             GROUP BY f.id;
@@ -154,17 +167,21 @@ impl NewFile {
 
 impl<'stmt> From<&Row<'stmt>> for File {
     fn from(row: &Row) -> Self {
-        let feature_name_raw: Vec<String> = row
+        let feature_names: Vec<String> = row
             .get(5)
             .map(|s: String| s.split(',').map(|s| s.to_string()).collect())
             .unwrap_or_default();
-        let mut feature_names = vec![];
-        for feature_name in feature_name_raw {
-            if !feature_names.contains(&feature_name) {
-                feature_names.push(feature_name);
-            }
-        }
-        feature_names.sort();
+
+        let commit_shas: Vec<String> = row
+            .get(6)
+            .map(|s: String| s.split(',').map(|s| s.to_string()).collect())
+            .unwrap_or_default();
+
+        let owners: Vec<String> = row
+            .get(7)
+            .map(|s: String| s.split(',').map(|s| s.to_string()).collect())
+            .unwrap_or_default();
+
         Self {
             id: row.get(0).unwrap(),
             project_id: row.get(1).unwrap(),
@@ -172,10 +189,175 @@ impl<'stmt> From<&Row<'stmt>> for File {
             created_at: NaiveDateTime::from_timestamp(row.get(3).unwrap(), 0),
             updated_at: NaiveDateTime::from_timestamp(row.get(4).unwrap(), 0),
             feature_names,
-            commits_shas: row
-                .get(6)
-                .map(|s: String| s.split(',').map(|s| s.to_string()).collect())
-                .unwrap_or_default(),
+            commit_shas,
+            owners,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::db::models::commit::NewCommit;
+    use crate::db::models::feature::NewFeature;
+    use crate::db::models::file::NewFile;
+    use crate::db::models::file_commit::FileCommit;
+    use crate::db::models::file_feature::NewFileFeature;
+    use crate::db::models::file_owner::NewFileOwner;
+    use crate::db::models::owner::NewOwner;
+    use crate::test::builders::project_builder::ProjectBuilder;
+    use crate::test::tests::init;
+    use crate::File;
+    use chrono::Utc;
+
+    #[test]
+    fn save() {
+        let (db, tmp_dir) = init();
+        let project = ProjectBuilder::with_path(tmp_dir).build(&db).unwrap();
+        let file = NewFile {
+            project_id: project.id,
+            path: "src/main.rs".to_string(),
+        }
+        .save(&db)
+        .unwrap();
+        assert_eq!(file.id, 1);
+        assert_eq!(file.project_id, project.id);
+        assert_eq!(file.path, "src/main.rs".to_string());
+        assert!(file.feature_names.is_empty());
+        assert!(file.commit_shas.is_empty());
+        assert!(file.owners.is_empty());
+
+        // Cannot have duplicate files in the same project
+        let file = NewFile {
+            project_id: project.id,
+            path: "src/main.rs".to_string(),
+        }
+        .save(&db)
+        .unwrap();
+        assert_eq!(file.id, 1);
+    }
+
+    #[test]
+    fn load() {
+        let (db, tmp_dir) = init();
+        let project = ProjectBuilder::with_path(tmp_dir).build(&db).unwrap();
+        let commit_1 = NewCommit {
+            project_id: project.id,
+            sha: "deadbeef".to_string(),
+            parent_sha: None,
+            description: "Initial Commit".to_string(),
+            commit_time: Utc::now().naive_utc(),
+        }
+        .save(&db)
+        .unwrap();
+        let feature = NewFeature {
+            project_id: project.id,
+            name: "Test".to_string(),
+            description: None,
+        }
+        .save(&db)
+        .unwrap();
+        let owner = NewOwner {
+            handle: "Krakaw".to_string(),
+            name: None,
+            primary_owner_id: None,
+        }
+        .save(&db)
+        .unwrap();
+        let file = NewFile {
+            project_id: project.id,
+            path: "src/main.rs".to_string(),
+        }
+        .save(&db)
+        .unwrap();
+
+        NewFileFeature {
+            file_id: file.id,
+            feature_id: feature.id,
+        }
+        .save(&db)
+        .unwrap();
+
+        FileCommit {
+            file_id: file.id,
+            commit_id: commit_1.id,
+        }
+        .save(&db)
+        .unwrap();
+        NewFileOwner {
+            file_id: file.id,
+            owner_id: owner.id,
+            action_date: Utc::now().naive_utc(),
+            sha: commit_1.sha,
+        }
+        .save(&db)
+        .unwrap();
+
+        let db_file = File::load_by_path(project.id, "src/main.rs".to_string(), &db).unwrap();
+        assert_eq!(db_file.id, 1);
+        assert_eq!(db_file.project_id, 1);
+        assert_eq!(db_file.path, "src/main.rs".to_string());
+        assert_eq!(db_file.feature_names, vec!["Test".to_string()]);
+        assert_eq!(db_file.commit_shas, vec!["deadbeef".to_string()]);
+        assert_eq!(db_file.owners, vec!["Krakaw".to_string()]);
+
+        let commit_2 = NewCommit {
+            project_id: project.id,
+            sha: "beefdead".to_string(),
+            parent_sha: Some("deadbeef".to_string()),
+            description: "Feature Commit".to_string(),
+            commit_time: Utc::now().naive_utc(),
+        }
+        .save(&db)
+        .unwrap();
+
+        FileCommit {
+            file_id: file.id,
+            commit_id: commit_2.id,
+        }
+        .save(&db)
+        .unwrap();
+        let owner = NewOwner {
+            handle: "NewOwner".to_string(),
+            name: None,
+            primary_owner_id: None,
+        }
+        .save(&db)
+        .unwrap();
+
+        let feature = NewFeature {
+            project_id: project.id,
+            name: "New Feature".to_string(),
+            description: None,
+        }
+        .save(&db)
+        .unwrap();
+        NewFileFeature {
+            file_id: file.id,
+            feature_id: feature.id,
+        }
+        .save(&db)
+        .unwrap();
+        NewFileOwner {
+            file_id: file.id,
+            owner_id: owner.id,
+            action_date: Utc::now().naive_utc(),
+            sha: commit_2.sha,
+        }
+        .save(&db)
+        .unwrap();
+
+        let db_file = File::load_by_path(project.id, "src/main.rs".to_string(), &db).unwrap();
+        assert_eq!(
+            db_file.feature_names,
+            vec!["Test".to_string(), "New Feature".to_string()]
+        );
+        assert_eq!(
+            db_file.commit_shas,
+            vec!["deadbeef".to_string(), "beefdead".to_string()]
+        );
+        assert_eq!(
+            db_file.owners,
+            vec!["Krakaw".to_string(), "NewOwner".to_string()]
+        );
     }
 }

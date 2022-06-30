@@ -45,7 +45,9 @@ impl Commit {
     }
     pub fn load_by_sha(sha: String, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare(&Commit::sql("WHERE sha LIKE ?1;".to_string()))?;
+        let mut stmt = conn.prepare(&Commit::sql(
+            "WHERE sha LIKE ?1 ORDER BY commit_time ASC;".to_string(),
+        ))?;
         extract_first!(params![&format!("{}%", sha)], stmt)
     }
 
@@ -87,16 +89,23 @@ mod test {
     fn save() {
         let (db, tmp_dir) = init();
         let project = ProjectBuilder::with_path(tmp_dir).build(&db).unwrap();
+        let c1_commit_time = Utc::now().naive_utc();
         let commit_1 = NewCommit {
             project_id: project.id,
             sha: "deadbeef".to_string(),
             parent_sha: None,
             description: "Initial Commit".to_string(),
-            commit_time: Utc::now().naive_utc(),
+            commit_time: c1_commit_time,
         }
         .save(&db)
         .unwrap();
+        assert_eq!(commit_1.id, 1);
+        assert_eq!(commit_1.project_id, project.id);
         assert_eq!(commit_1.sha, "deadbeef".to_string());
+        assert_eq!(commit_1.parent_sha, None);
+        assert_eq!(commit_1.description, "Initial Commit".to_string());
+        assert_eq!(commit_1.commit_time.timestamp(), c1_commit_time.timestamp());
+
         let commit_2 = NewCommit {
             project_id: project.id,
             sha: "deadbeef2".to_string(),
@@ -146,6 +155,9 @@ mod test {
         .unwrap();
 
         let c1 = Commit::load(commit_1.id as i64, &db).unwrap();
+        assert_eq!(c1.sha, commit_1.sha);
+
+        let c1 = Commit::load_by_sha("deadbee".to_string(), &db).unwrap();
         assert_eq!(c1.sha, commit_1.sha);
 
         let c2 = Commit::load_by_sha("deadbeef2".to_string(), &db).unwrap();

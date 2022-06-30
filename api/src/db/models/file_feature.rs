@@ -6,6 +6,7 @@ use crate::Db;
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 
+#[derive(Debug)]
 pub struct FileFeature {
     pub file_id: u32,
     pub feature_id: u32,
