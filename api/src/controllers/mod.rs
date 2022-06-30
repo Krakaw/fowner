@@ -6,10 +6,12 @@ pub struct Server;
 
 use crate::{Db, FownerError};
 use actix_web::{web, App, HttpResponse, HttpServer};
+use log::info;
 use std::net::SocketAddr;
 
 impl Server {
     pub async fn start(db: Db, listen: &SocketAddr) -> Result<(), FownerError> {
+        info!("Starting server on {:?}", listen);
         HttpServer::new(move || {
             App::new()
                 .app_data(web::Data::new(db.clone()))
