@@ -3,11 +3,13 @@ mod owners;
 mod projects;
 
 pub struct Server;
+
 use crate::{Db, FownerError};
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpResponse, HttpServer};
+use std::net::SocketAddr;
 
 impl Server {
-    pub async fn start(db: Db) -> Result<(), FownerError> {
+    pub async fn start(db: Db, listen: &SocketAddr) -> Result<(), FownerError> {
         HttpServer::new(move || {
             App::new()
                 .app_data(web::Data::new(db.clone()))
@@ -36,8 +38,9 @@ impl Server {
                                 .route("", web::get().to(projects::load)),
                         ),
                 )
+                .service(web::scope("/status").route("", web::get().to(HttpResponse::Ok)))
         })
-        .bind(("127.0.0.1", 8080))?
+        .bind(listen)?
         .run()
         .await?;
         Ok(())

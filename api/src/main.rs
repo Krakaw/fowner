@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::path::PathBuf;
 mod controllers;
 mod db;
@@ -58,7 +59,11 @@ enum Commands {
         #[clap(short, long, default_value = ".fowner.features")]
         dotfile: String,
     },
-    Serve,
+    Serve {
+        /// Listen address
+        #[clap(short, long, default_value = "0.0.0.0:8080")]
+        listen: SocketAddr,
+    },
     Migrate,
 }
 
@@ -104,7 +109,7 @@ async fn main() -> Result<(), FownerError> {
             eprintln!("{}", serde_json::to_string(&owners)?);
         }
         Commands::Migrate => db.init()?,
-        Commands::Serve => controllers::Server::start(db).await?,
+        Commands::Serve { listen } => controllers::Server::start(db, listen).await?,
     }
 
     Ok(())
