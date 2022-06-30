@@ -1,3 +1,5 @@
+pub mod builders;
+
 #[cfg(test)]
 pub mod tests {
     use crate::Db;

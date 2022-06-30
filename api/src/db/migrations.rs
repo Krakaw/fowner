@@ -6,6 +6,7 @@ pub fn migrations() -> Vec<&'static str> {
                 id          INTEGER  PRIMARY KEY AUTOINCREMENT,
                 project_id  INTEGER NOT NULL,
                 sha         TEXT NOT NULL,
+                parent_sha  TEXT NULL,
                 description TEXT NULL,
                 commit_time INT  NOT NULL,
                 created_at  INT  NOT NULL,

@@ -46,10 +46,11 @@ impl<'a> Processor<'a> {
             .save(self.db)?;
             // 2. We need to create a Commit for the hash
             let commit_date = NaiveDateTime::from_timestamp(git_history.timestamp as i64, 0);
-            let sha = git_history.hash.clone();
+            let sha = git_history.sha.clone();
             let commit = NewCommit {
                 project_id,
                 sha: sha.clone(),
+                parent_sha: git_history.parent_sha.clone(),
                 description: git_history.summary.clone(),
                 commit_time: commit_date,
             }

@@ -16,7 +16,8 @@ pub struct GitRepo {
 #[derive(PartialEq)]
 enum GitState {
     Handle,
-    Hash,
+    Sha,
+    ParentSha,
     Timestamp,
     Summary,
     Files,
@@ -32,7 +33,7 @@ impl GitRepo {
             "--no-pager".to_string(),
             "log".to_string(),
             "--name-only".to_string(),
-            "--pretty=format:---%n%an%n%H%n%ad%n%s".to_string(),
+            "--pretty=format:---%n%an%n%H%n%P%n%ad%n%s".to_string(),
             "--date=unix".to_string(),
         ];
 
@@ -79,10 +80,17 @@ impl GitRepo {
                         handle: line,
                         ..GitHistory::default()
                     };
-                    state = GitState::Hash;
+                    state = GitState::Sha;
                 }
-                GitState::Hash => {
-                    row.hash = line;
+                GitState::Sha => {
+                    row.sha = line;
+                    state = GitState::ParentSha;
+                }
+                GitState::ParentSha => {
+                    row.parent_sha = match line.trim() {
+                        "" => None,
+                        _ => Some(line.trim().to_string())
+                    } ;
                     state = GitState::Timestamp;
                 }
                 GitState::Timestamp => {
