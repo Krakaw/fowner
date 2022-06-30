@@ -3,8 +3,8 @@ on: [push, pull_request]
 name: Lint and Test
 
 jobs:
-  check:
-    name: Check
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -19,15 +19,7 @@ jobs:
 
       - name: Set working dir
         run: mv api/* .
-      - name: Run cargo check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
 
-  test:
-    needs: check
-    name: Test Suite
-    steps:
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
         with:
