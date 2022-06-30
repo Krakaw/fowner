@@ -74,6 +74,7 @@ impl GitRepo {
                 continue;
             }
 
+            // TODO: Refactor this to be less tightly coupled
             match state {
                 GitState::Handle => {
                     row = GitHistory {
@@ -89,8 +90,8 @@ impl GitRepo {
                 GitState::ParentSha => {
                     row.parent_sha = match line.trim() {
                         "" => None,
-                        _ => Some(line.trim().to_string())
-                    } ;
+                        _ => Some(line.trim().to_string()),
+                    };
                     state = GitState::Timestamp;
                 }
                 GitState::Timestamp => {
@@ -105,7 +106,7 @@ impl GitRepo {
                             .map(|r| r.as_str().split(',').collect())
                             .unwrap_or_else(Vec::new)
                             .iter()
-                            .map(|s| s.to_string())
+                            .map(|s| s.trim().to_string())
                             .collect::<Vec<String>>();
                         row.features = features;
                     }
