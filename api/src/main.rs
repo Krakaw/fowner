@@ -24,11 +24,16 @@ struct Cli {
     /// Database path
     #[clap(short, long, default_value = "./.data.sqlite3")]
     database_path: PathBuf,
+    /// Temp repo path
+    #[clap(short, long, default_value = "./data")]
+    temp_repo_path: PathBuf,
+    /// Sub-Commands
     #[clap(subcommand)]
     command: Commands,
 }
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Process the git history for a repository
     History {
         /// Path of repository to extract history from
         #[clap(short, long)]
@@ -59,11 +64,13 @@ enum Commands {
         #[clap(short, long, default_value = ".fowner.features")]
         dotfile: String,
     },
+    /// Serve the HTTP REST API [default: 0.0.0.0:8080]
     Serve {
         /// Listen address
         #[clap(short, long, default_value = "0.0.0.0:8080")]
         listen: SocketAddr,
     },
+    /// Run the migrations for the database
     Migrate,
 }
 
@@ -72,6 +79,7 @@ async fn main() -> Result<(), FownerError> {
     env_logger::init();
     let cli = Cli::parse();
     let db = Db::new(&cli.database_path)?;
+    let temp_repo_path = cli.temp_repo_path;
 
     match &cli.command {
         Commands::History {
@@ -109,7 +117,9 @@ async fn main() -> Result<(), FownerError> {
             eprintln!("{}", serde_json::to_string(&owners)?);
         }
         Commands::Migrate => db.init()?,
-        Commands::Serve { listen } => controllers::Server::start(db, listen).await?,
+        Commands::Serve { listen } => {
+            controllers::Server::start(db, listen, temp_repo_path).await?
+        }
     }
 
     Ok(())

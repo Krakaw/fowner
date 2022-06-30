@@ -12,7 +12,7 @@ RUN cargo build  --release
 
 
 FROM debian:bullseye-slim
-RUN apt-get update && apt-get install -y libsqlite3-dev curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git libsqlite3-dev curl && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/src/fowner/target/release/fowner /usr/local/bin/fowner
 WORKDIR /opt/fowner
 EXPOSE 8080

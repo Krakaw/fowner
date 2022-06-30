@@ -17,6 +17,7 @@ pub struct Project {
     pub updated_at: NaiveDateTime,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct NewProject {
     pub name: Option<String>,
     pub repo_url: Option<String>,
