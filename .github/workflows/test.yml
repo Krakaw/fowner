@@ -18,7 +18,8 @@ jobs:
           override: true
 
       - name: Set working dir
-        working-directory: ./src
+        run: |
+          - mv api/* .
       - name: Run cargo check
         uses: actions-rs/cargo@v1
         with:
@@ -35,7 +36,8 @@ jobs:
         uses: actions-rs/toolchain@v1
 
       - name: Set working dir
-        working-directory: ./src
+          run: |
+            - mv api/* .
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
