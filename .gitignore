@@ -8,5 +8,4 @@
 api/data/
 data/
 # local sqlite db
-/api/.data.sqlite3
 **/*.sqlite3

@@ -1,10 +1,9 @@
 use crate::errors::FownerError;
 use crate::git::history::GitHistory;
-use chrono::{Duration, NaiveDateTime};
-use log::{debug, trace};
+use crate::git::manager::GitManager;
+use chrono::NaiveDateTime;
 use regex::Regex;
 use std::path::PathBuf;
-use std::process::Command;
 use std::str::FromStr;
 
 pub struct GitRepo {
@@ -28,42 +27,22 @@ impl GitRepo {
     /// The history is chronological ASC
     /// If `since` is passed in it only takes commits 1 second AFTER that datetime
     pub fn parse(&self, since: Option<NaiveDateTime>) -> Result<Vec<GitHistory>, FownerError> {
-        let mut history = vec![];
-        let mut args = vec![
-            "--no-pager".to_string(),
-            "log".to_string(),
-            "--name-only".to_string(),
-            "--pretty=format:---%n%an%n%H%n%P%n%ad%n%s".to_string(),
-            "--date=unix".to_string(),
-        ];
+        let git_manager = GitManager {
+            local_path: self.path.clone(),
+            repo_url: None,
+        };
+        let history_string = git_manager.history(since)?;
+        GitRepo::process_rows(history_string)
+    }
 
-        if let Some(since) = since {
-            let after = format!(
-                "--after=\"{}\"",
-                since
-                    .checked_add_signed(Duration::seconds(1))
-                    .unwrap_or(since)
-                    .format("%Y-%m-%dT%H:%M:%S.0Z")
-            );
-            debug!("Fetching Commits After: {}", after);
-            args.push(after);
-        }
-        trace!("git {}", args.join(" "));
-        let result = Command::new("git")
-            .current_dir(&self.path)
-            .args(args)
-            .arg(".")
-            .output()?;
-        if !result.status.success() {
-            return Err(FownerError::Execution(String::from_utf8(result.stderr)?));
-        }
-        let s = String::from_utf8(result.stdout)?;
+    pub fn process_rows(history_string: String) -> Result<Vec<GitHistory>, FownerError> {
+        let mut history = vec![];
         let mut row = GitHistory::default();
         let mut state = GitState::Handle;
         // Extracts features from an appended [Feature,Feature] list in the commit message
-        let re = Regex::new(r"\[([\w,]+)\]$")?;
+        let re = Regex::new(r"\[([\w ,-]+)\]$")?;
 
-        for line in s.split('\n') {
+        for line in history_string.split('\n') {
             let line = line.trim().to_string();
             if line == "---" {
                 // This pattern denotes the start of a new record
@@ -90,7 +69,14 @@ impl GitRepo {
                 GitState::ParentSha => {
                     row.parent_sha = match line.trim() {
                         "" => None,
-                        _ => Some(line.trim().to_string()),
+                        _ => Some(
+                            // Always use the last commit as the parent
+                            line.trim()
+                                .split(' ')
+                                .last()
+                                .unwrap_or_default()
+                                .to_string(),
+                        ),
                     };
                     state = GitState::Timestamp;
                 }
@@ -124,5 +110,95 @@ impl GitRepo {
         }
         history.reverse();
         Ok(history)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::GitRepo;
+
+    #[test]
+    fn process_rows() {
+        let history_string = r#"---
+Krakaw
+74ebe78fe948f83d42a59d021b5a411b7ac13981
+685dc3d64c54719dadd46b9b7bc4cb0a994728e1 43ce09e6475f4013fc00a6bdfefc4a53e4ddff68
+1655513699
+Merge branch 'main' of github.com:Krakaw/fowner
+---
+Krakaw
+685dc3d64c54719dadd46b9b7bc4cb0a994728e1
+790f3db24ba26480725dbfc52594b4ce5d4a0b13
+1655513635
+Added models and initial DB interactions
+.gitignore
+Cargo.toml
+src/db/migrations.rs
+src/db/mod.rs
+src/db/models/commit.rs
+src/db/models/feature.rs
+src/db/models/file.rs
+src/db/models/mod.rs
+src/db/models/owner.rs
+src/db/models/project.rs
+src/git/history.rs
+src/git/mod.rs
+src/git/repo.rs
+src/main.rs
+
+---
+Krakaw
+43ce09e6475f4013fc00a6bdfefc4a53e4ddff68
+790f3db24ba26480725dbfc52594b4ce5d4a0b13
+1655451712
+Initial commit of feature tracking based on git history
+src/git/history.rs
+src/main.rs
+
+---
+Krakaw
+790f3db24ba26480725dbfc52594b4ce5d4a0b13
+c60c24663d3b67fdee8079a18cbe40c843932b48
+1655395513
+Initial commit of feature tracking based on git history [Core_Feature-1, History 2]
+.gitignore
+Cargo.toml
+README.md
+src/git/history.rs
+src/git/mod.rs
+src/main.rs
+
+---
+Keith Simon
+c60c24663d3b67fdee8079a18cbe40c843932b48
+
+1655391971
+Initial commit [Core_Feature-1]
+.gitignore
+README.md
+
+"#
+        .to_string();
+        let history = GitRepo::process_rows(history_string).unwrap();
+        assert_eq!(history.len(), 5);
+        let initial = history.first().unwrap();
+        assert_eq!(initial.sha, "c60c24663d3b67fdee8079a18cbe40c843932b48");
+        assert_eq!(initial.handle, "Keith Simon");
+        assert_eq!(initial.features, vec!["Core_Feature-1"]);
+        assert_eq!(initial.files, vec![".gitignore", "README.md"]);
+        assert_eq!(initial.parent_sha, None);
+
+        let multiple_features = history.get(1).unwrap();
+        assert_eq!(
+            multiple_features.features,
+            vec!["Core_Feature-1", "History 2"]
+        );
+
+        let last = history.last().unwrap();
+        assert_eq!(last.sha, "74ebe78fe948f83d42a59d021b5a411b7ac13981");
+        assert_eq!(
+            last.parent_sha,
+            Some("43ce09e6475f4013fc00a6bdfefc4a53e4ddff68".to_string())
+        );
     }
 }

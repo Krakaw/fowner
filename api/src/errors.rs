@@ -1,6 +1,5 @@
 use actix_web::http::uri::InvalidUri;
 use std::num::ParseIntError;
-use std::process::ExitStatus;
 use std::string::FromUtf8Error;
 use thiserror::Error;
 
@@ -30,8 +29,8 @@ pub enum FownerError {
     GitError(String),
     #[error("Invalid URI: {0}")]
     InvalidUri(#[from] InvalidUri),
-    // #[error("Unknown error")]
-    // Unknown,
+    #[error("Internal Error: {0}")]
+    Internal(String),
 }
 
 impl actix_web::error::ResponseError for FownerError {}

@@ -1,4 +1,6 @@
-<h1 align="center">Welcome to fowner 👋</h1>
+<p align="center">
+    <img style="width: 300px" src="web/public/images/logo.svg"/>
+</p>
 <p>
   <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-blue.svg?cacheSeconds=2592000" />
   <a href="https://twitter.com/krakaw_1" target="_blank">

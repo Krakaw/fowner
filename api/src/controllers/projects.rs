@@ -10,6 +10,7 @@ pub async fn create(
     json: web::Json<NewProject>,
 ) -> Result<impl Responder> {
     let mut new_project: NewProject = json.into_inner();
+    // TODO Don't make this absolute, keep it relative so the folder can be dragged and dropped elsewhere
     if !new_project.path.is_absolute() {
         let project_dir = temp_repo_path.into_inner().join(new_project.path);
         if !project_dir.exists() {
@@ -18,10 +19,7 @@ pub async fn create(
         new_project.path = project_dir;
     }
     let project = new_project.save(&db)?;
-    let manager = GitManager::init(
-        project.clone().path.into(),
-        project.clone().repo_url.unwrap_or_default(),
-    )?;
+    let manager = GitManager::init(project.clone().path.into(), project.clone().repo_url)?;
     manager.fetch()?;
 
     Ok(web::Json(project))
