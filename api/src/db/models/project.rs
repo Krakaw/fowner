@@ -1,6 +1,7 @@
 use crate::db::models::{extract_all, extract_first};
 use crate::errors::FownerError;
-use crate::{Db, GitRepo};
+use crate::git::manager::GitManager;
+use crate::Db;
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
@@ -79,10 +80,10 @@ impl<'stmt> From<&Row<'stmt>> for Project {
     }
 }
 
-impl From<&GitRepo> for NewProject {
-    fn from(repo: &GitRepo) -> Self {
+impl From<&GitManager> for NewProject {
+    fn from(repo: &GitManager) -> Self {
         NewProject {
-            name: repo.name.clone(),
+            name: None,
             repo_url: repo.url.clone(),
             path: repo.path.clone(),
         }

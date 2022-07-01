@@ -26,7 +26,7 @@ enum GitState {
 
 impl GitHistory {
     /// Processes the specifically formatted git log to generate a vec of `GitHistory`
-    pub fn process_rows(history_string: String) -> Result<Vec<GitHistory>, FownerError> {
+    pub fn parse(history_string: String) -> Result<Vec<GitHistory>, FownerError> {
         let mut history = vec![];
         let mut row = GitHistory::default();
         let mut state = GitState::Handle;
@@ -169,7 +169,7 @@ README.md
 
 "#
         .to_string();
-        let history = GitHistory::process_rows(history_string).unwrap();
+        let history = GitHistory::parse(history_string).unwrap();
         assert_eq!(history.len(), 5);
         let initial = history.first().unwrap();
         assert_eq!(initial.sha, "c60c24663d3b67fdee8079a18cbe40c843932b48");

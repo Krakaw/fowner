@@ -43,8 +43,11 @@ impl Server {
                         .route("", web::post().to(projects::create))
                         .service(
                             web::scope("/{project_id}")
-                                .route("", web::put().to(projects::trigger_refresh))
-                                .route("", web::get().to(projects::load)),
+                                .route("", web::get().to(projects::load))
+                                .service(
+                                    web::scope("/fetch")
+                                        .route("", web::post().to(projects::fetch_remote_repo)),
+                                ),
                         ),
                 )
                 .service(web::scope("/status").route("", web::get().to(HttpResponse::Ok)))

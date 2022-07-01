@@ -29,8 +29,8 @@ pub enum FownerError {
     GitError(String),
     #[error("Invalid URI: {0}")]
     InvalidUri(#[from] InvalidUri),
-    #[error("Internal Error: {0}")]
-    Internal(String),
+    // #[error("Internal Error: {0}")]
+    // Internal(String),
 }
 
 impl actix_web::error::ResponseError for FownerError {}

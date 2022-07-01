@@ -1,3 +1,4 @@
+use crate::git::history::GitHistory;
 use crate::FownerError;
 use chrono::{Duration, NaiveDateTime};
 use log::{debug, trace};
@@ -7,24 +8,32 @@ use std::process::Command;
 const GIT_HISTORY_LOG_FORMAT: &str = "---%n%an%n%H%n%P%n%ad%n%s";
 
 pub struct GitManager {
-    pub local_path: PathBuf,
+    pub path: PathBuf,
     pub url: Option<String>,
 }
 
 impl GitManager {
-    pub fn init(local_path: PathBuf, url: Option<String>) -> Result<Self, FownerError> {
-        if url.is_none() {
-            return Err(FownerError::Internal(
-                "repo_url cannot be blank to init GitManager".to_string(),
-            ));
+    pub fn init(path: PathBuf, url: Option<String>) -> Result<Self, FownerError> {
+        let git_manager = Self { path, url };
+        if !git_manager.path.exists() {
+            // Create the path if it doesn't exist
+            std::fs::create_dir_all(&git_manager.path)?;
         }
-        let git_manager = Self { local_path, url };
-
-        if !git_manager.is_valid_repo() {
+        if !git_manager.is_valid_repo()? {
             // This path has not been instantiated, attempt to clone the repo
             git_manager.clone()?;
         }
         Ok(git_manager)
+    }
+
+    /// Parse the git log output and return GitHistory
+    /// The history is chronological ASC
+    /// If `since` is passed in it only takes commits 1 second AFTER that datetime
+    pub fn parse_history(
+        &self,
+        since: Option<NaiveDateTime>,
+    ) -> Result<Vec<GitHistory>, FownerError> {
+        GitHistory::parse(self.history(since)?)
     }
 
     /// Returns the raw git log history string
@@ -50,7 +59,7 @@ impl GitManager {
         }
         trace!("git {}", args.join(" "));
         let result = Command::new("git")
-            .current_dir(&self.local_path)
+            .current_dir(&self.path)
             .args(args)
             .arg(".")
             .output()?;
@@ -62,32 +71,41 @@ impl GitManager {
 
     pub fn fetch(&self) -> Result<(), FownerError> {
         Command::new("git")
-            .current_dir(&self.local_path)
+            .current_dir(&self.path)
             .arg("fetch")
             .output()
             .map_err(|e| FownerError::GitError(format!("Fetch error {}", e)))?;
         Ok(())
     }
 
-    pub fn is_valid_repo(&self) -> bool {
-        Command::new("git")
-            .current_dir(&self.local_path)
+    pub fn is_valid_repo(&self) -> Result<bool, FownerError> {
+        let result = Command::new("git")
+            .current_dir(&self.path)
             .arg("status")
             .output()
-            .is_ok()
+            .map_err(|e| FownerError::GitError(format!("Status error {}", e)));
+        match result {
+            Ok(output) => Ok(output.status.success()),
+            Err(e) => {
+                debug!("Checking if repo is valid failed {:?}", e);
+                Ok(false)
+            }
+        }
     }
 
     pub fn clone(&self) -> Result<(), FownerError> {
-        Command::new("git")
-            .current_dir(&self.local_path.parent().ok_or_else(|| {
-                FownerError::NotFound(format!("Invalid local path {:?}", self.local_path))
-            })?)
+        let output = Command::new("git")
+            .current_dir(&self.path)
             .arg("clone")
             .arg("--no-checkout")
             .arg(&self.url.clone().unwrap_or_default())
-            .arg(&self.local_path)
+            .arg(".")
             .output()
-            .map_err(|e| FownerError::GitError(format!("Clone error {}", e)))?;
+            .map_err(|e| {
+                eprintln!("e = {:?}", e);
+                FownerError::GitError(format!("Clone error {}", e))
+            })?;
+        debug!("Clone Result {}", String::from_utf8(output.stdout)?);
         Ok(())
     }
 }
@@ -98,7 +116,7 @@ mod test {
     use crate::test::tests::TestHandler;
 
     #[test]
-    fn initialize_new_repo() {
+    fn initialize_new_remote_repo() {
         let handler = TestHandler::init();
         let tmp_dir = handler.tmp_dir.clone();
         let repo_dir = tmp_dir.join("fowner");
@@ -108,7 +126,9 @@ mod test {
         )
         .unwrap();
         let history = git_manager.history(None).unwrap();
+
         assert!(history.starts_with("---"));
+        assert!(history.contains("d2b7bc86de36a40c2f32cf44c1931a38163bfb51"));
 
         // Fetch should succeed
         assert!(git_manager.fetch().is_ok());

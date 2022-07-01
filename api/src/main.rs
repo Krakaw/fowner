@@ -13,10 +13,11 @@ use crate::db::models::file::File;
 use crate::db::models::project::Project;
 use crate::db::processor::Processor;
 use crate::db::Db;
-use crate::git::repo::GitRepo;
 
 use crate::errors::FownerError;
+use crate::git::manager::GitManager;
 use clap::{Parser, Subcommand};
+use env_logger::Env;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -38,9 +39,6 @@ enum Commands {
         /// Path of repository to extract history from
         #[clap(short, long)]
         filepath: PathBuf,
-        /// Project Name
-        #[clap(short, long)]
-        name: Option<String>,
         /// Git repo url
         #[clap(short, long)]
         repo_url: Option<String>,
@@ -76,7 +74,8 @@ enum Commands {
 
 #[actix_web::main]
 async fn main() -> Result<(), FownerError> {
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("fowner=info")).init();
+
     let cli = Cli::parse();
     let db = Db::new(&cli.database_path)?;
     let temp_repo_path = cli.temp_repo_path;
@@ -84,22 +83,20 @@ async fn main() -> Result<(), FownerError> {
     match &cli.command {
         Commands::History {
             filepath,
-            name,
             repo_url,
             bypass_save,
         } => {
-            let repo = GitRepo {
+            let git_manager = GitManager {
                 path: filepath.clone(),
-                name: name.clone(),
                 url: repo_url.clone(),
             };
-            let mut processor = Processor::new(repo, &db)?;
+            let processor = Processor::new(git_manager, &db)?;
             // Fetch the commits from the local repository and insert the required records
             // Projects, Owners, Files, Commits, File Owners
             if *bypass_save {
                 eprintln!(
                     "{}",
-                    serde_json::to_string(&processor.repo.parse_history(None)?)?
+                    serde_json::to_string(&processor.git_manager.parse_history(None)?)?
                 );
             } else {
                 let _ = processor.fetch_commits_and_update_db()?;

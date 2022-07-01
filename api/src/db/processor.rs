@@ -7,30 +7,35 @@ use crate::db::models::file_owner::NewFileOwner;
 use crate::db::models::owner::NewOwner;
 use crate::db::models::project::{NewProject, Project};
 use crate::errors::FownerError;
-use crate::{Db, GitRepo};
+use crate::git::manager::GitManager;
+use crate::Db;
 use chrono::NaiveDateTime;
 use log::debug;
 
 pub struct Processor<'a> {
     pub db: &'a Db,
-    pub repo: GitRepo,
+    pub git_manager: GitManager,
     pub project: Project,
 }
 
 impl<'a> Processor<'a> {
-    pub fn new(repo: GitRepo, db: &'a Db) -> Result<Self, FownerError> {
-        let project = NewProject::from(&repo).save(db)?;
-        Ok(Processor { db, repo, project })
+    pub fn new(git_manager: GitManager, db: &'a Db) -> Result<Self, FownerError> {
+        let project = NewProject::from(&git_manager).save(db)?;
+        Ok(Processor {
+            db,
+            git_manager,
+            project,
+        })
     }
 
-    pub fn fetch_commits_and_update_db(&mut self) -> Result<usize, FownerError> {
+    pub fn fetch_commits_and_update_db(&self) -> Result<usize, FownerError> {
         let number_of_commits = self.fetch_history_and_store_data()?;
         Ok(number_of_commits)
     }
 
-    pub fn fetch_history_and_store_data(&mut self) -> Result<usize, FownerError> {
+    pub fn fetch_history_and_store_data(&self) -> Result<usize, FownerError> {
         let latest_commit = self.get_most_recent_commit();
-        let history = self.repo.parse_history(latest_commit)?;
+        let history = self.git_manager.parse_history(latest_commit)?;
         let project = self.project.clone();
         let project_id = project.id;
         let number_of_commits = history.len();
