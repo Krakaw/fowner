@@ -30,7 +30,7 @@ impl<'a> Processor<'a> {
 
     pub fn fetch_history_and_store_data(&mut self) -> Result<usize, FownerError> {
         let latest_commit = self.get_most_recent_commit();
-        let history = self.repo.parse(latest_commit)?;
+        let history = self.repo.parse_history(latest_commit)?;
         let project = self.project.clone();
         let project_id = project.id;
         let number_of_commits = history.len();

@@ -97,7 +97,10 @@ async fn main() -> Result<(), FownerError> {
             // Fetch the commits from the local repository and insert the required records
             // Projects, Owners, Files, Commits, File Owners
             if *bypass_save {
-                eprintln!("{}", serde_json::to_string(&processor.repo.parse(None)?)?);
+                eprintln!(
+                    "{}",
+                    serde_json::to_string(&processor.repo.parse_history(None)?)?
+                );
             } else {
                 let _ = processor.fetch_commits_and_update_db()?;
             }

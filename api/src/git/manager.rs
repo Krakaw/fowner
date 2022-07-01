@@ -4,22 +4,21 @@ use log::{debug, trace};
 use std::path::PathBuf;
 use std::process::Command;
 
+const GIT_HISTORY_LOG_FORMAT: &str = "---%n%an%n%H%n%P%n%ad%n%s";
+
 pub struct GitManager {
     pub local_path: PathBuf,
-    pub repo_url: Option<String>,
+    pub url: Option<String>,
 }
 
 impl GitManager {
-    pub fn init(local_path: PathBuf, repo_url: Option<String>) -> Result<Self, FownerError> {
-        if repo_url.is_none() {
+    pub fn init(local_path: PathBuf, url: Option<String>) -> Result<Self, FownerError> {
+        if url.is_none() {
             return Err(FownerError::Internal(
                 "repo_url cannot be blank to init GitManager".to_string(),
             ));
         }
-        let git_manager = Self {
-            local_path,
-            repo_url,
-        };
+        let git_manager = Self { local_path, url };
 
         if !git_manager.is_valid_repo() {
             // This path has not been instantiated, attempt to clone the repo
@@ -28,12 +27,13 @@ impl GitManager {
         Ok(git_manager)
     }
 
+    /// Returns the raw git log history string
     pub fn history(&self, since: Option<NaiveDateTime>) -> Result<String, FownerError> {
         let mut args = vec![
             "--no-pager".to_string(),
             "log".to_string(),
             "--name-only".to_string(),
-            "--pretty=format:---%n%an%n%H%n%P%n%ad%n%s".to_string(),
+            format!("--pretty=format:{}", GIT_HISTORY_LOG_FORMAT),
             "--date=unix".to_string(),
         ];
 
@@ -64,7 +64,7 @@ impl GitManager {
         Command::new("git")
             .current_dir(&self.local_path)
             .arg("fetch")
-            .status()
+            .output()
             .map_err(|e| FownerError::GitError(format!("Fetch error {}", e)))?;
         Ok(())
     }
@@ -73,7 +73,7 @@ impl GitManager {
         Command::new("git")
             .current_dir(&self.local_path)
             .arg("status")
-            .status()
+            .output()
             .is_ok()
     }
 
@@ -84,10 +84,33 @@ impl GitManager {
             })?)
             .arg("clone")
             .arg("--no-checkout")
-            .arg(&self.repo_url.clone().unwrap_or_default())
+            .arg(&self.url.clone().unwrap_or_default())
             .arg(&self.local_path)
-            .status()
+            .output()
             .map_err(|e| FownerError::GitError(format!("Clone error {}", e)))?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::git::manager::GitManager;
+    use crate::test::tests::TestHandler;
+
+    #[test]
+    fn initialize_new_repo() {
+        let handler = TestHandler::init();
+        let tmp_dir = handler.tmp_dir.clone();
+        let repo_dir = tmp_dir.join("fowner");
+        let git_manager = GitManager::init(
+            repo_dir.clone(),
+            Some("https://github.com/Krakaw/empty.git".to_string()),
+        )
+        .unwrap();
+        let history = git_manager.history(None).unwrap();
+        assert!(history.starts_with("---"));
+
+        // Fetch should succeed
+        assert!(git_manager.fetch().is_ok());
     }
 }

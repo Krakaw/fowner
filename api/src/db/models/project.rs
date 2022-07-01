@@ -92,7 +92,7 @@ impl From<&GitRepo> for NewProject {
 #[cfg(test)]
 mod tests {
     use crate::db::models::project::NewProject;
-    use crate::test::tests::init;
+    use crate::test::tests::TestHandler;
     use crate::{Db, Project};
     use std::path::Path;
 
@@ -113,10 +113,12 @@ mod tests {
 
     #[test]
     fn all() {
-        let (db, tmp_dir) = init();
-        let project1 = add_project(&db, &tmp_dir, "Project_1".to_string());
-        let project2 = add_project(&db, &tmp_dir, "Project_2".to_string());
-        let db_projects = Project::all(&db).unwrap();
+        let handler = TestHandler::init();
+        let db = &handler.db;
+        let tmp_dir = &handler.tmp_dir;
+        let project1 = add_project(db, tmp_dir, "Project_1".to_string());
+        let project2 = add_project(db, tmp_dir, "Project_2".to_string());
+        let db_projects = Project::all(db).unwrap();
         assert_eq!(db_projects.len(), 2);
         assert_eq!(project1, db_projects[0]);
         assert_eq!(project2, db_projects[1]);
@@ -124,22 +126,26 @@ mod tests {
 
     #[test]
     fn load() {
-        let (db, tmp_dir) = init();
-        let _project1 = add_project(&db, &tmp_dir, "Project_1".to_string());
-        let project2 = add_project(&db, &tmp_dir, "Project_2".to_string());
-        let db_projects = Project::load(2, &db).unwrap();
+        let handler = TestHandler::init();
+        let db = &handler.db;
+        let tmp_dir = &handler.tmp_dir;
+        let _project1 = add_project(db, tmp_dir, "Project_1".to_string());
+        let project2 = add_project(db, tmp_dir, "Project_2".to_string());
+        let db_projects = Project::load(2, db).unwrap();
         assert_eq!(project2, db_projects);
     }
 
     #[test]
     fn load_by_path() {
-        let (db, tmp_dir) = init();
-        let project1 = add_project(&db, &tmp_dir, "Project_1".to_string());
-        let _project2 = add_project(&db, &tmp_dir, "Project_2".to_string());
-        let db_projects = Project::load_by_path(tmp_dir.join("Project_1").as_path(), &db).unwrap();
+        let handler = TestHandler::init();
+        let db = &handler.db;
+        let tmp_dir = &handler.tmp_dir;
+        let project1 = add_project(db, tmp_dir, "Project_1".to_string());
+        let _project2 = add_project(db, tmp_dir, "Project_2".to_string());
+        let db_projects = Project::load_by_path(tmp_dir.join("Project_1").as_path(), db).unwrap();
         assert_eq!(project1, db_projects);
         // Load non existent
-        let not_found_db_projects = Project::load_by_path(tmp_dir.join("Project_x").as_path(), &db);
+        let not_found_db_projects = Project::load_by_path(tmp_dir.join("Project_x").as_path(), db);
         assert!(not_found_db_projects.is_err());
     }
 }

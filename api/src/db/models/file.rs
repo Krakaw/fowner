@@ -205,14 +205,16 @@ mod test {
     use crate::db::models::file_owner::NewFileOwner;
     use crate::db::models::owner::NewOwner;
     use crate::test::builders::project_builder::ProjectBuilder;
-    use crate::test::tests::init;
+    use crate::test::tests::TestHandler;
     use crate::File;
     use chrono::Utc;
 
     #[test]
     fn save() {
-        let (db, tmp_dir) = init();
-        let project = ProjectBuilder::with_path(tmp_dir).build(&db).unwrap();
+        let handler = TestHandler::init();
+        let db = &handler.db;
+        let tmp_dir = &handler.tmp_dir;
+        let project = ProjectBuilder::with_path(tmp_dir).build(db).unwrap();
         let file = NewFile {
             project_id: project.id,
             path: "src/main.rs".to_string(),
@@ -238,8 +240,10 @@ mod test {
 
     #[test]
     fn load() {
-        let (db, tmp_dir) = init();
-        let project = ProjectBuilder::with_path(tmp_dir).build(&db).unwrap();
+        let handler = TestHandler::init();
+        let db = &handler.db;
+        let tmp_dir = &handler.tmp_dir;
+        let project = ProjectBuilder::with_path(tmp_dir).build(db).unwrap();
         let commit_1 = NewCommit {
             project_id: project.id,
             sha: "deadbeef".to_string(),

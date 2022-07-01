@@ -1,7 +1,7 @@
 use crate::db::models::project::NewProject;
 use crate::{Db, FownerError, Project};
 use std::env::temp_dir;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[allow(dead_code)]
 pub struct ProjectBuilder {
@@ -26,9 +26,9 @@ impl Default for ProjectBuilder {
 
 #[allow(dead_code)]
 impl ProjectBuilder {
-    pub fn with_path(path: PathBuf) -> ProjectBuilder {
+    pub fn with_path(path: &Path) -> ProjectBuilder {
         Self {
-            path,
+            path: path.to_path_buf(),
             ..ProjectBuilder::default()
         }
     }
