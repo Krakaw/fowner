@@ -6,7 +6,7 @@ services:
       - "8080:8080"
     restart: unless-stopped
     environment:
-      - RUST_LOG=fowner=info
+      - SSH_AUTH_SOCK=/ssh-agent
     command: [ "fowner", "serve" ]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
@@ -15,3 +15,4 @@ services:
       retries: 3
     volumes:
       - "./data:/opt/fowner"
+      - ${SSH_AUTH_SOCK}:/ssh-agent
