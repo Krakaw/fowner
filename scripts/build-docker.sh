@@ -2,7 +2,7 @@
 set -e
 IMAGE_NAME="${IMAGE_NAME:-fowner}"
 TAG="${TAG:-latest}"
-docker build --platform=linux/amd64 -t "$IMAGE_NAME:$TAG" .
+docker buildx build --platform=linux/amd64 -t "$IMAGE_NAME:$TAG" .
 
 if [ -n "$SSH_HOST" ]; then
   echo "Deploying to $SSH_HOST"
