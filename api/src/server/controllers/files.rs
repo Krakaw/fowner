@@ -2,7 +2,6 @@ use crate::server::paging::Paging;
 use crate::{Db, File};
 use actix_web::{web, Responder, Result};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchRequest {
