@@ -1,4 +1,4 @@
-use crate::server::controllers::{features, owners, projects};
+use crate::server::controllers::{features, files, owners, projects};
 use crate::{Db, FownerError};
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
@@ -47,6 +47,9 @@ impl Api {
                                 .service(
                                     web::scope("/fetch")
                                         .route("", web::post().to(projects::fetch_remote_repo)),
+                                )
+                                .service(
+                                    web::scope("/files").route("", web::get().to(files::search)),
                                 ),
                         ),
                 )

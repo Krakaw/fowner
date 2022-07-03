@@ -21,7 +21,7 @@ pub struct File {
 }
 
 impl File {
-    fn sql(where_clause: Option<String>) -> String {
+    fn sql(where_clause: Option<String>, limit_clause: Option<String>) -> String {
         format!(
             r#"
             SELECT f.id,
@@ -50,21 +50,39 @@ impl File {
             FROM files f
             WHERE f.project_id = ?1
             {}
-            GROUP BY f.id;
+            GROUP BY f.id
+            {};
         "#,
-            where_clause.unwrap_or_default()
+            where_clause.unwrap_or_default(),
+            limit_clause.unwrap_or_default()
         )
     }
     pub fn all(project_id: u32, db: &Db) -> Result<Vec<File>, FownerError> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare(&File::sql(None))?;
+        let mut stmt = conn.prepare(&File::sql(None, None))?;
         extract_all!(params![project_id], stmt)
     }
 
     pub fn load_by_path(project_id: u32, path: String, db: &Db) -> Result<File, FownerError> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare(&File::sql(Some("AND path = ?2".to_string())))?;
+        let mut stmt = conn.prepare(&File::sql(Some("AND path = ?2".to_string()), None))?;
         extract_first!(params![project_id, path], stmt)
+    }
+
+    pub fn search(
+        project_id: u32,
+        query: String,
+        limit: u32,
+        offset: u32,
+        db: &Db,
+    ) -> Result<Vec<File>, FownerError> {
+        let conn = db.pool.get()?;
+        let mut stmt = conn.prepare(&File::sql(
+            Some("AND path like ?2".to_string()),
+            Some("LIMIT ?3 OFFSET ?4".to_string()),
+        ))?;
+        let query = format!("%{}%", query);
+        extract_all!(params![project_id, query, limit, offset], stmt)
     }
 
     pub fn add_feature(&self, feature_id: u32, db: &Db) -> Result<FileFeature, FownerError> {

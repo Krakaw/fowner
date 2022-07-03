@@ -46,7 +46,7 @@ enum Commands {
         #[clap(short, long)]
         repo_path: PathBuf,
         /// Git repo url
-        #[clap(short, long)]
+        #[clap(short = 'u', long)]
         repo_url: Option<String>,
         /// Do not save history in DB
         #[clap(short, long)]
