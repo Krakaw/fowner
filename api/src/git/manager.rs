@@ -105,7 +105,11 @@ impl GitManager {
                 eprintln!("e = {:?}", e);
                 FownerError::GitError(format!("Clone error {}", e))
             })?;
-        debug!("Clone Result {}", String::from_utf8(output.stdout)?);
+        debug!(
+            "Clone Result {}\n Clone Error: {}",
+            String::from_utf8(output.stdout)?,
+            String::from_utf8(output.stderr)?
+        );
         Ok(())
     }
 }
