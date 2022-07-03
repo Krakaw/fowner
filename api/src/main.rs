@@ -68,8 +68,6 @@ enum Commands {
         #[clap(short, long, default_value = "0.0.0.0:8080")]
         listen: SocketAddr,
     },
-    /// Run the migrations for the database
-    Migrate,
 }
 
 #[actix_web::main]
@@ -78,6 +76,8 @@ async fn main() -> Result<(), FownerError> {
 
     let cli = Cli::parse();
     let db = Db::new(&cli.database_path)?;
+    // Init runs the migrations on every boot
+    db.init()?;
     let temp_repo_path = cli.temp_repo_path;
 
     match &cli.command {
@@ -116,7 +116,7 @@ async fn main() -> Result<(), FownerError> {
             let owners = file.get_owners(&db)?;
             eprintln!("{}", serde_json::to_string(&owners)?);
         }
-        Commands::Migrate => db.init()?,
+
         Commands::Serve { listen } => {
             controllers::Server::start(db, listen, temp_repo_path).await?
         }

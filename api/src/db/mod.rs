@@ -22,11 +22,9 @@ impl Db {
     }
 
     pub fn init(&self) -> Result<(), FownerError> {
-        let connection = self.pool.get()?;
+        let mut connection = self.pool.get()?;
         let migrations = migrations::migrations();
-        for migration in migrations {
-            connection.execute_batch(migration)?;
-        }
+        migrations.to_latest(&mut connection)?;
         Ok(())
     }
 }

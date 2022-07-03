@@ -1,6 +1,9 @@
-pub fn migrations() -> Vec<&'static str> {
-    vec![
-        r#"
+use rusqlite_migration::{Migrations, M};
+
+pub fn migrations() -> Migrations<'static> {
+    Migrations::new(vec![
+        M::up(
+            r#"
             CREATE TABLE IF NOT EXISTS commits
             (
                 id          INTEGER  PRIMARY KEY AUTOINCREMENT,
@@ -13,10 +16,14 @@ pub fn migrations() -> Vec<&'static str> {
                 updated_at  INT  NOT NULL
             );
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE UNIQUE INDEX idx_commits_project_id_sha ON commits (project_id, sha);
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE TABLE IF NOT EXISTS features
             (
                 id          INTEGER  PRIMARY KEY AUTOINCREMENT,
@@ -27,7 +34,9 @@ pub fn migrations() -> Vec<&'static str> {
                 updated_at  INT  NOT NULL
             );
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE TABLE IF NOT EXISTS files
             (
                 id         INTEGER  PRIMARY KEY AUTOINCREMENT,
@@ -37,10 +46,14 @@ pub fn migrations() -> Vec<&'static str> {
                 updated_at INT  NOT NULL
             );
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE UNIQUE INDEX idx_files_project_id_path ON files (project_id, path);
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE TABLE IF NOT EXISTS file_owners
             (
                 file_id     INTEGER,
@@ -51,7 +64,9 @@ pub fn migrations() -> Vec<&'static str> {
                 updated_at  INT NOT NULL
             );
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE TABLE IF NOT EXISTS file_features
             (
                 file_id     INTEGER ,
@@ -60,10 +75,14 @@ pub fn migrations() -> Vec<&'static str> {
                 updated_at  INT NOT NULL
             );
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE UNIQUE INDEX idx_feature_files_file_id_feature_id ON file_features (file_id, feature_id);
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE TABLE IF NOT EXISTS owners
             (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -74,7 +93,9 @@ pub fn migrations() -> Vec<&'static str> {
                 updated_at       INT     NOT NULL
             );
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE TABLE IF NOT EXISTS projects
             (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,15 +106,29 @@ pub fn migrations() -> Vec<&'static str> {
                 updated_at      INT  NOT NULL
             );
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE TABLE IF NOT EXISTS file_commits
             (
                 file_id     INTEGER,
                 commit_id   INTEGER
             );
         "#,
-        r#"
+        ),
+        M::up(
+            r#"
             CREATE UNIQUE INDEX idx_file_commits_file_id_commit_id ON file_commits (file_id, commit_id);
         "#,
-    ]
+        ),
+    ])
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn migrations_test() {
+        assert!(migrations().validate().is_ok());
+    }
 }

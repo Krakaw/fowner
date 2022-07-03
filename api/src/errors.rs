@@ -15,6 +15,8 @@ pub enum FownerError {
     R2d2(#[from] r2d2::Error),
     #[error("Rusqlite error {0}")]
     Rusqlite(#[from] r2d2_sqlite::rusqlite::Error),
+    #[error("Migration error {0}")]
+    Migration(#[from] rusqlite_migration::Error),
     #[error("File IO Error {0}")]
     FileIO(#[from] std::io::Error),
     #[error("Utf8 Conversion Error: {0}")]

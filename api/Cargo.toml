@@ -21,6 +21,7 @@ log = "0.4.0"
 actix-web = "4"
 thiserror = "1.0"
 regex = "1.5.6"
+rusqlite_migration = "1.0.0"
 
 [dev-dependencies]
 rand = "0.8.5"
