@@ -16,7 +16,7 @@ pub async fn create(
     if !new_project.path.is_absolute() {
         let project_dir = temp_repo_path.into_inner().join(new_project.path);
         if !project_dir.exists() {
-            std::fs::create_dir(project_dir.clone())?;
+            std::fs::create_dir_all(project_dir.clone())?;
         }
         new_project.path = project_dir;
     }
