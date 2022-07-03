@@ -7,7 +7,6 @@ services:
     restart: unless-stopped
     environment:
       - SSH_AUTH_SOCK=/ssh-agent
-      - GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
     command: [ "fowner", "serve" ]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
