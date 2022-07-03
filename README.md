@@ -41,8 +41,7 @@ OPTIONS:
     -V, --version                          Print version information
 
 SUBCOMMANDS:
-    dotfile    Generate a dotfile in the target repository that contains all the files and their
-                   features
+    dotfile    Generate a dotfile in the target repo containing all files and their features
     help       Print this message or the help of the given subcommand(s)
     history    Process the git history for a repository
     serve      Serve the HTTP REST API [default: 0.0.0.0:8080]

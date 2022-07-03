@@ -52,7 +52,7 @@ enum Commands {
         #[clap(short, long)]
         bypass_save: bool,
     },
-    /// Generate a dotfile in the target repository that contains all the files and their features
+    /// Generate a dotfile in the target repo containing all files and their features
     Dotfile {
         /// Path of repository to extract history from
         #[clap(short, long)]
