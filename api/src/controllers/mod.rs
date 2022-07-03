@@ -5,6 +5,7 @@ mod projects;
 pub struct Server;
 
 use crate::{Db, FownerError};
+use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer};
 use log::info;
 use std::net::SocketAddr;
@@ -19,6 +20,7 @@ impl Server {
         info!("Starting server on {:?}", listen);
         HttpServer::new(move || {
             App::new()
+                .wrap(Logger::default())
                 .app_data(web::Data::new(db.clone()))
                 .app_data(web::Data::new(temp_repo_path.clone()))
                 .service(web::scope("/features").route(
