@@ -24,20 +24,27 @@ struct Cli {
     /// Database path
     #[clap(short, long, default_value = "./.data.sqlite3")]
     database_path: PathBuf,
-    /// Temp repo path
-    #[clap(short, long, default_value = "./data")]
-    temp_repo_path: PathBuf,
+
     /// Sub-Commands
     #[clap(subcommand)]
     command: Commands,
 }
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Serve the HTTP REST API [default: 0.0.0.0:8080]
+    Serve {
+        /// Listen address
+        #[clap(short, long, default_value = "0.0.0.0:8080")]
+        listen: SocketAddr,
+        /// Monitored repository storage path
+        #[clap(short, long, default_value = "./data")]
+        storage_path: PathBuf,
+    },
     /// Process the git history for a repository
     History {
         /// Path of repository to extract history from
         #[clap(short, long)]
-        filepath: PathBuf,
+        repo_path: PathBuf,
         /// Git repo url
         #[clap(short, long)]
         repo_url: Option<String>,
@@ -45,27 +52,14 @@ enum Commands {
         #[clap(short, long)]
         bypass_save: bool,
     },
-    FileOwners {
-        /// File name
-        #[clap(short, long)]
-        name: String,
+    /// Generate a dotfile in the target repository that contains all the files and their features
+    Dotfile {
         /// Path of repository to extract history from
         #[clap(short, long)]
-        filepath: PathBuf,
-    },
-    GenerateDotfile {
-        /// Path of repository to extract history from
-        #[clap(short, long)]
-        filepath: PathBuf,
+        repo_path: PathBuf,
         /// Dotfile filename
         #[clap(short, long, default_value = ".fowner.features")]
         dotfile: String,
-    },
-    /// Serve the HTTP REST API [default: 0.0.0.0:8080]
-    Serve {
-        /// Listen address
-        #[clap(short, long, default_value = "0.0.0.0:8080")]
-        listen: SocketAddr,
     },
 }
 
@@ -75,18 +69,17 @@ async fn main() -> Result<(), FownerError> {
 
     let cli = Cli::parse();
     let db = Db::new(&cli.database_path)?;
-    // Init runs the migrations on every boot
+    // Init runs the migrations on every run
     db.init()?;
-    let temp_repo_path = cli.temp_repo_path;
 
     match &cli.command {
         Commands::History {
-            filepath,
+            repo_path,
             repo_url,
             bypass_save,
         } => {
             let git_manager = GitManager {
-                path: filepath.clone(),
+                path: repo_path.clone(),
                 url: repo_url.clone(),
             };
             let processor = Processor::new(git_manager, &db)?;
@@ -101,22 +94,17 @@ async fn main() -> Result<(), FownerError> {
                 let _ = processor.fetch_commits_and_update_db()?;
             }
         }
-        Commands::GenerateDotfile { filepath, dotfile } => {
-            let project = Project::load_by_path(filepath, &db)?;
-            let dotfile_path = filepath.join(dotfile);
+        Commands::Dotfile { repo_path, dotfile } => {
+            let project = Project::load_by_path(repo_path, &db)?;
+            let dotfile_path = repo_path.join(dotfile);
             let path = File::generate_feature_file(project.id, dotfile_path, &db)?;
 
             eprintln!("dotfile path = {}", path.canonicalize()?.to_string_lossy());
         }
-        Commands::FileOwners { filepath, name } => {
-            let project = Project::load_by_path(filepath, &db)?;
-
-            let file = File::load_by_path(project.id, name.clone(), &db)?;
-            let owners = file.get_owners(&db)?;
-            eprintln!("{}", serde_json::to_string(&owners)?);
-        }
-
-        Commands::Serve { listen } => server::api::Api::start(db, listen, temp_repo_path).await?,
+        Commands::Serve {
+            listen,
+            storage_path,
+        } => server::api::Api::start(db, listen, storage_path.clone()).await?,
     }
 
     Ok(())

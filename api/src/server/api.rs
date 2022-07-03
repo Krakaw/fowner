@@ -13,14 +13,14 @@ impl Api {
     pub async fn start(
         db: Db,
         listen: &SocketAddr,
-        temp_repo_path: PathBuf,
+        storage_path: PathBuf,
     ) -> Result<(), FownerError> {
         info!("Starting server on {:?}", listen);
         HttpServer::new(move || {
             App::new()
                 .wrap(Logger::default())
                 .app_data(web::Data::new(db.clone()))
-                .app_data(web::Data::new(temp_repo_path.clone()))
+                .app_data(web::Data::new(storage_path.clone()))
                 .service(web::scope("/features").route(
                     "/{from_commit}/{to_commit}",
                     web::get().to(features::get_features_between_commits),

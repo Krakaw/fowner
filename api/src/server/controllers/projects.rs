@@ -8,13 +8,13 @@ use std::path::PathBuf;
 
 pub async fn create(
     db: web::Data<Db>,
-    temp_repo_path: web::Data<PathBuf>,
+    storage_path: web::Data<PathBuf>,
     json: web::Json<NewProject>,
 ) -> Result<impl Responder> {
     let mut new_project: NewProject = json.into_inner();
     // TODO Don't make this absolute, keep it relative so the folder can be dragged and dropped elsewhere
     if !new_project.path.is_absolute() {
-        let project_dir = temp_repo_path.into_inner().join(new_project.path);
+        let project_dir = storage_path.into_inner().join(new_project.path);
         if !project_dir.exists() {
             std::fs::create_dir_all(project_dir.clone())?;
         }

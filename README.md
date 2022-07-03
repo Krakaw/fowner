@@ -28,6 +28,26 @@ cargo build --release
 cargo run -- --help
 ```
 
+```
+fowner 0.1.1
+Krakaw <41575888+Krakaw@users.noreply.github.com>
+
+USAGE:
+    fowner [OPTIONS] <SUBCOMMAND>
+
+OPTIONS:
+    -d, --database-path <DATABASE_PATH>    Database path [default: ./.data.sqlite3]
+    -h, --help                             Print help information
+    -V, --version                          Print version information
+
+SUBCOMMANDS:
+    dotfile    Generate a dotfile in the target repository that contains all the files and their
+                   features
+    help       Print this message or the help of the given subcommand(s)
+    history    Process the git history for a repository
+    serve      Serve the HTTP REST API [default: 0.0.0.0:8080]
+```
+
 ## Run tests
 
 ```sh

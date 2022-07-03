@@ -1,6 +1,5 @@
 use crate::db::models::feature::NewFeature;
 use crate::db::models::file_feature::{FileFeature, NewFileFeature};
-use crate::db::models::file_owner::FileOwner;
 use crate::db::models::{extract_all, extract_first};
 use crate::errors::FownerError;
 use crate::Db;
@@ -66,10 +65,6 @@ impl File {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(&File::sql(Some("AND path = ?2".to_string())))?;
         extract_first!(params![project_id, path], stmt)
-    }
-
-    pub fn get_owners(&self, db: &Db) -> Result<Vec<FileOwner>, FownerError> {
-        FileOwner::load(self.id, None, None, db)
     }
 
     pub fn add_feature(&self, feature_id: u32, db: &Db) -> Result<FileFeature, FownerError> {
