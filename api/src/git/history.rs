@@ -30,8 +30,8 @@ impl GitHistory {
         let mut history = vec![];
         let mut row = GitHistory::default();
         let mut state = GitState::Handle;
-        // Extracts features from an appended [Feature,Feature] list in the commit message
-        let re = Regex::new(r"\[([\w ,-]+)\]$")?;
+        // Extracts features from any [Feature,Feature] list in the commit message
+        let re = Regex::new(r"\[([\w ,-]+)\]")?;
 
         for line in history_string.split('\n') {
             let line = line.trim().to_string();
@@ -141,9 +141,8 @@ Krakaw
 43ce09e6475f4013fc00a6bdfefc4a53e4ddff68
 790f3db24ba26480725dbfc52594b4ce5d4a0b13
 1655451712
-Initial commit of feature tracking based on git history
-src/git/history.rs
-src/main.rs
+Initial commit of feature [AnyFeature] tracking based on git history
+src/unknown.rs
 
 ---
 Krakaw
@@ -183,6 +182,9 @@ README.md
             multiple_features.features,
             vec!["Core_Feature-1", "History 2"]
         );
+
+        let extract_anywhere = history.get(2).unwrap();
+        assert_eq!(extract_anywhere.features, vec!["AnyFeature"]);
 
         let last = history.last().unwrap();
         assert_eq!(last.sha, "74ebe78fe948f83d42a59d021b5a411b7ac13981");

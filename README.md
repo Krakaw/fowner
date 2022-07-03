@@ -18,13 +18,17 @@
 
 ## Install
 
-```sh
+```shell
 cargo build --release
+```
+or
+```shell
+cargo install fowner
 ```
 
 ## Usage
 
-```sh
+```shell
 cargo run -- --help
 ```
 
@@ -49,7 +53,7 @@ SUBCOMMANDS:
 
 ## Run tests
 
-```sh
+```shell
 cargo test
 ```
 
@@ -57,7 +61,7 @@ cargo test
 
 👤 **Krakaw**
 
-* Website: https://krakaw.com
+[//]: # (* Website: https://github.com/Krakaw/fowner)
 * Twitter: [@krakaw_1](https://twitter.com/krakaw_1)
 * Github: [@Krakaw](https://github.com/Krakaw)
 
@@ -65,7 +69,7 @@ cargo test
 
 ### Adding features
 
-> Features can be added via appending `[Feature 1,Feature 2]` to pull request titles.
+> Features can be added via adding `[Feature 1,Feature 2]` to pull request titles.
 > 
 > Or features can be added via generating a dotfile and manually adding a features to a file as a comma separated list.
 
