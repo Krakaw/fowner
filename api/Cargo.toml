@@ -7,7 +7,7 @@ license = "MIT"
 description = "Track features and file ownership for git repositories"
 homepage = "https://github.com/Krakaw/fowner"
 repository = "https://github.com/Krakaw/fowner"
-readme = "README.md"
+readme = "../README.md"
 keywords = ["git", "features", "owners", "commits"]
 categories = ["command-line-utilities", "web-programming::http-server", "development-tools"]
 
