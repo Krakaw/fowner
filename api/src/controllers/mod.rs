@@ -1,16 +1,16 @@
 mod features;
 mod owners;
 mod projects;
-
-pub struct Server;
-
 use crate::{Db, FownerError};
 use actix_web::middleware::Logger;
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{web, App, HttpServer};
 use log::info;
+use serde_json::json;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+pub struct Server;
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 impl Server {
     pub async fn start(
         db: Db,
@@ -52,7 +52,10 @@ impl Server {
                                 ),
                         ),
                 )
-                .service(web::scope("/status").route("", web::get().to(HttpResponse::Ok)))
+                .service(web::scope("/status").route(
+                    "",
+                    web::get().to(|| async { web::Json(json!({ "version": VERSION })) }),
+                ))
         })
         .bind(listen)?
         .run()

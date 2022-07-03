@@ -1,27 +1,26 @@
 [package]
 name = "fowner"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Krakaw <41575888+Krakaw@users.noreply.github.com>"]
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
 name = "fowner"
 path = "src/main.rs"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-clap = { version = "3.1.18", features = ["derive"] }
-r2d2_sqlite = { version = "0.16.0"}
-r2d2 = "0.8.8"
+actix-web = "4"
 chrono = { version= "0.4.19", features = ["serde"] }
+clap = { version = "3.1.18", features = ["derive"] }
 env_logger = "0.9.0"
 log = "0.4.0"
-actix-web = "4"
-thiserror = "1.0"
+r2d2 = "0.8.8"
+r2d2_sqlite = { version = "0.16.0"}
 regex = "1.5.6"
 rusqlite_migration = "1.0.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
 
 [dev-dependencies]
 rand = "0.8.5"
