@@ -1,9 +1,7 @@
-use std::net::SocketAddr;
-use std::path::PathBuf;
-mod controllers;
 mod db;
 mod errors;
 mod git;
+mod server;
 mod test;
 
 extern crate core;
@@ -13,11 +11,12 @@ use crate::db::models::file::File;
 use crate::db::models::project::Project;
 use crate::db::processor::Processor;
 use crate::db::Db;
-
 use crate::errors::FownerError;
 use crate::git::manager::GitManager;
 use clap::{Parser, Subcommand};
 use env_logger::Env;
+use std::net::SocketAddr;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -117,9 +116,7 @@ async fn main() -> Result<(), FownerError> {
             eprintln!("{}", serde_json::to_string(&owners)?);
         }
 
-        Commands::Serve { listen } => {
-            controllers::Server::start(db, listen, temp_repo_path).await?
-        }
+        Commands::Serve { listen } => server::api::Api::start(db, listen, temp_repo_path).await?,
     }
 
     Ok(())

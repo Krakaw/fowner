@@ -1,6 +1,4 @@
-mod features;
-mod owners;
-mod projects;
+use crate::server::controllers::{features, owners, projects};
 use crate::{Db, FownerError};
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
@@ -9,9 +7,9 @@ use serde_json::json;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
-pub struct Server;
+pub struct Api;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-impl Server {
+impl Api {
     pub async fn start(
         db: Db,
         listen: &SocketAddr,
