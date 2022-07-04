@@ -6,17 +6,16 @@ interface ProjectProps {
     onChange: (id: number) => void
 }
 function Projects(props: ProjectProps) {
+
     const { isLoading, error, data } = useQuery('projectData', () =>
         fetch(`${config.apiUrl}/projects`).then(res =>
             res.json()
         )
     )
 
-
     if (isLoading) return <>Loading...</>
 
     if (error ) return (<>An error has occurred: {error}</>);
-
 
     return (
         <select onChange={e => {props.onChange(parseInt(e.target.value))}}>

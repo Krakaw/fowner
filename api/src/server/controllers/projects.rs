@@ -6,7 +6,19 @@ use serde_json::json;
 use std::path::PathBuf;
 
 pub async fn create(db: web::Data<Db>, json: web::Json<NewProject>) -> Result<impl Responder> {
-    let new_project: NewProject = json.into_inner();
+    let mut new_project: NewProject = json.into_inner();
+    let repo_url = new_project.repo_url.clone();
+    let name = if let Some(name) = new_project.name {
+        Some(name)
+    } else {
+        if let Some(repo_url) = repo_url {
+            Some(repo_url.split('/').last().unwrap_or_default().to_string())
+        } else {
+            None
+        }
+    };
+
+    new_project.name = name;
     let project = new_project.save(&db)?;
     Ok(web::Json(project))
 }
