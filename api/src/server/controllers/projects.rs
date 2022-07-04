@@ -1,34 +1,25 @@
-use crate::db::models::feature::Feature;
 use crate::db::models::project::NewProject;
 use crate::git::manager::GitManager;
-use crate::{Db, File, Processor, Project};
+use crate::{Db, Processor, Project};
 use actix_web::{web, Responder, Result};
 use serde_json::json;
 use std::path::PathBuf;
 
-pub async fn create(
-    db: web::Data<Db>,
-    storage_path: web::Data<PathBuf>,
-    json: web::Json<NewProject>,
-) -> Result<impl Responder> {
-    let mut new_project: NewProject = json.into_inner();
-    // TODO Don't make this absolute, keep it relative so the folder can be dragged and dropped elsewhere
-    if !new_project.path.is_absolute() {
-        let project_dir = storage_path.into_inner().join(new_project.path);
-        if !project_dir.exists() {
-            std::fs::create_dir_all(project_dir.clone())?;
-        }
-        new_project.path = project_dir;
-    }
+pub async fn create(db: web::Data<Db>, json: web::Json<NewProject>) -> Result<impl Responder> {
+    let new_project: NewProject = json.into_inner();
     let project = new_project.save(&db)?;
-
     Ok(web::Json(project))
 }
 
-pub async fn fetch_remote_repo(db: web::Data<Db>, path: web::Path<u32>) -> Result<impl Responder> {
-    let project_id = path.into_inner();
+pub async fn fetch_remote_repo(
+    db: web::Data<Db>,
+    storage_path: web::Data<PathBuf>,
+    project_id: web::Path<u32>,
+) -> Result<impl Responder> {
+    let project_id = project_id.into_inner();
     let project = Project::load(project_id, &db)?;
-    let git_manager = GitManager::init(project.clone().path.into(), project.repo_url)?;
+    let absolute_path = project.get_absolute_dir(&storage_path.into_inner());
+    let git_manager = GitManager::init(absolute_path, project.repo_url)?;
     git_manager.fetch()?;
     let processor = Processor::new(git_manager, &db)?;
     let commit_count = processor.fetch_commits_and_update_db()?;
@@ -43,9 +34,59 @@ pub async fn all(db: web::Data<Db>) -> Result<impl Responder> {
 pub async fn load(db: web::Data<Db>, path: web::Path<u32>) -> Result<impl Responder> {
     let project_id = path.into_inner();
     let project = Project::load(project_id, &db)?;
-    let features = Feature::load_by_project(project.id, &db)?;
-    let files = File::all(project.id, &db)?;
-    Ok(web::Json(
-        json!({ "project": project, "features": features, "files": files }),
-    ))
+    let display_project = project.for_display(&db)?;
+    Ok(web::Json(json!(display_project)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::models::project::DisplayProject;
+    use crate::test::tests::TestHandler;
+    use actix_http::Request;
+    use actix_web::dev::Service;
+    use actix_web::{dev, error::Error as HttpError, test, web, web::Data, App};
+    use serde_json::Value;
+
+    async fn init(
+        db: &Db,
+        tmp_dir: &PathBuf,
+    ) -> impl Service<Request, Response = dev::ServiceResponse, Error = HttpError> {
+        test::init_service(
+            App::new()
+                .app_data(Data::new(db.clone()))
+                .app_data(Data::new(tmp_dir.clone()))
+                .route("/", web::post().to(create))
+                .route("/", web::get().to(all))
+                .route("/{id}", web::get().to(load))
+                .route("/{id}/fetch", web::post().to(fetch_remote_repo)),
+        )
+        .await
+    }
+    #[actix_web::test]
+    async fn test_controller() {
+        let handler = TestHandler::init();
+        let app = init(&handler.db, &handler.tmp_dir).await;
+        let req = test::TestRequest::post().uri("/").set_json(&json!({"name": "TestProject", "repo_url": "https://github.com/Krakaw/empty.git", "path": "empty"})).to_request();
+        let project: Project = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(project.id, 1);
+
+        let db_project = Project::load(1, &handler.db).unwrap();
+        assert_eq!(project, db_project.clone());
+
+        let req = test::TestRequest::get().uri("/").to_request();
+        let projects: Vec<Project> = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects, vec![db_project.clone()]);
+
+        let req = test::TestRequest::post().uri("/1/fetch").to_request();
+        let commits: Value = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(commits.get("commits").unwrap().as_u64().unwrap(), 1);
+
+        let req = test::TestRequest::get().uri("/1").to_request();
+        let project: DisplayProject = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(project.project.id, 1);
+        assert!(project.features.is_empty());
+        assert!(project.files.is_empty());
+    }
 }

@@ -11,6 +11,7 @@ pub mod tests {
     use std::path::{Path, PathBuf};
     use std::sync::Arc;
 
+    #[derive(Clone)]
     pub struct TestHandler {
         pub db: Db,
         pub tmp_dir: PathBuf,

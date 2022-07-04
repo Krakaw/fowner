@@ -8,7 +8,7 @@ use r2d2_sqlite::SqliteConnectionManager;
 use std::path::Path;
 use std::sync::Arc;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Db {
     pub pool: Arc<Pool<SqliteConnectionManager>>,
 }

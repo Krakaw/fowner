@@ -5,7 +5,7 @@ use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Commit {
     pub id: u32,
     pub project_id: u32,
@@ -61,7 +61,10 @@ impl Commit {
     }
     pub fn fetch_latest_for_project(project_id: u32, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare("SELECT id, project_id, sha, parent_sha, description, commit_time, created_at, updated_at FROM commits WHERE project_id = ?1 ORDER BY commit_time DESC LIMIT 1;")?;
+        let mut stmt = conn.prepare(&Commit::sql(
+            "WHERE project_id = ?1".to_string(),
+            Some("ORDER BY commit_time DESC LIMIT 1".to_string()),
+        ))?;
         extract_first!(params![project_id], stmt)
     }
     pub fn search(
@@ -188,5 +191,59 @@ mod test {
 
         let c3 = Commit::fetch_latest_for_project(project.id, &db).unwrap();
         assert_eq!(c3.sha, commit_3.sha);
+    }
+
+    #[test]
+    fn search() {
+        let handler = TestHandler::init();
+        let db = &handler.db;
+        let tmp_dir = &handler.tmp_dir;
+        let project = ProjectBuilder::with_path(tmp_dir).build(db).unwrap();
+        let commit_1 = NewCommit {
+            project_id: project.id,
+            sha: "deadbeef".to_string(),
+            parent_sha: None,
+            description: "Initial Commit".to_string(),
+            commit_time: Utc::now().naive_utc(),
+        }
+        .save(&db)
+        .unwrap();
+        let commit_2 = NewCommit {
+            project_id: project.id,
+            sha: "abcdfe123".to_string(),
+            parent_sha: Some("deadbeef".to_string()),
+            description: "Feature Commit".to_string(),
+            commit_time: Utc::now().naive_utc(),
+        }
+        .save(&db)
+        .unwrap();
+        let commit_3 = NewCommit {
+            project_id: project.id,
+            sha: "deadbeef3".to_string(),
+            parent_sha: Some("deadbeef2".to_string()),
+            description: "Bug Commit".to_string(),
+            commit_time: Utc::now()
+                .naive_utc()
+                .checked_add_signed(Duration::seconds(10))
+                .unwrap(),
+        }
+        .save(&db)
+        .unwrap();
+
+        let commits = Commit::search(project.id, None, 10, 0, &db).unwrap();
+        assert_eq!(commits.len(), 3);
+        assert_eq!(
+            commits,
+            vec![commit_1.clone(), commit_2.clone(), commit_3.clone()]
+        );
+        let commits = Commit::search(project.id, None, 2, 0, &db).unwrap();
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits, vec![commit_1.clone(), commit_2.clone()]);
+        let commits = Commit::search(project.id, None, 2, 2, &db).unwrap();
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits, vec![commit_3.clone()]);
+        let commits = Commit::search(project.id, Some("dfe".to_string()), 50, 0, &db).unwrap();
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits.first().unwrap().sha, commit_2.sha);
     }
 }
