@@ -39,6 +39,9 @@ enum Commands {
         /// Monitored repository storage path
         #[clap(short, long, default_value = "./data")]
         storage_path: PathBuf,
+        /// Public asset path
+        #[clap(short, long, default_value = "./public")]
+        public_asset_path: PathBuf,
     },
     /// Process the git history for a repository
     History {
@@ -104,7 +107,11 @@ async fn main() -> Result<(), FownerError> {
         Commands::Serve {
             listen,
             storage_path,
-        } => server::api::Api::start(db, listen, storage_path.clone()).await?,
+            public_asset_path,
+        } => {
+            server::api::Api::start(db, listen, public_asset_path.clone(), storage_path.clone())
+                .await?
+        }
     }
 
     Ok(())

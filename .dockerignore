@@ -1,3 +1,6 @@
 data/
 api/data/
 api/target
+
+web/node_modules
+web/.env
