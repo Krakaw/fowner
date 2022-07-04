@@ -1,5 +1,6 @@
+use crate::db::models::commit::Commit;
 use crate::server::controllers::SearchRequest;
-use crate::{Db, File};
+use crate::Db;
 use actix_web::{web, Responder, Result};
 
 pub async fn search(
@@ -9,13 +10,13 @@ pub async fn search(
 ) -> Result<impl Responder> {
     let query = query.into_inner();
     let project_id = project_id.into_inner();
-    let files = File::search(
+    let commits = Commit::search(
         project_id,
-        query.q.unwrap_or_default(),
+        query.q,
         query.paging.limit,
         query.paging.offset,
         &db,
     )?;
 
-    Ok(web::Json(files))
+    Ok(web::Json(commits))
 }

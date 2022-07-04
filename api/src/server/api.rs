@@ -1,5 +1,6 @@
-use crate::server::controllers::{features, files, owners, projects};
+use crate::server::controllers::{commits, features, files, owners, projects};
 use crate::{Db, FownerError};
+use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpServer};
 use log::info;
@@ -17,7 +18,9 @@ impl Api {
     ) -> Result<(), FownerError> {
         info!("Starting server on {:?}", listen);
         HttpServer::new(move || {
+            let cors = Cors::permissive();
             App::new()
+                .wrap(cors)
                 .wrap(Logger::default())
                 .app_data(web::Data::new(db.clone()))
                 .app_data(web::Data::new(storage_path.clone()))
@@ -50,6 +53,10 @@ impl Api {
                                 )
                                 .service(
                                     web::scope("/files").route("", web::get().to(files::search)),
+                                )
+                                .service(
+                                    web::scope("/commits")
+                                        .route("", web::get().to(commits::search)),
                                 ),
                         ),
                 )

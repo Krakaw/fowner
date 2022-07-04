@@ -1,9 +1,11 @@
-use crate::db::models::extract_first;
+use crate::db::models::{extract_all, extract_first};
 use crate::errors::FownerError;
 use crate::Db;
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Commit {
     pub id: u32,
     pub project_id: u32,
@@ -40,26 +42,42 @@ impl NewCommit {
     }
 }
 impl Commit {
-    fn sql(where_clause: String) -> String {
-        format!("SELECT id, project_id, sha, parent_sha, description, commit_time, created_at, updated_at FROM commits {}", where_clause)
+    fn sql(where_clause: String, paging_clause: Option<String>) -> String {
+        format!("SELECT id, project_id, sha, parent_sha, description, commit_time, created_at, updated_at FROM commits {} {}", where_clause, paging_clause.unwrap_or_default())
     }
     pub fn load_by_sha(sha: String, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare(&Commit::sql(
             "WHERE sha LIKE ?1 ORDER BY commit_time ASC;".to_string(),
+            None,
         ))?;
         extract_first!(params![&format!("{}%", sha)], stmt)
     }
 
     pub fn load(id: i64, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
-        let mut stmt = conn.prepare(&Commit::sql("WHERE id = ?1;".to_string()))?;
+        let mut stmt = conn.prepare(&Commit::sql("WHERE id = ?1;".to_string(), None))?;
         extract_first!(params![id], stmt)
     }
     pub fn fetch_latest_for_project(project_id: u32, db: &Db) -> Result<Self, FownerError> {
         let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT id, project_id, sha, parent_sha, description, commit_time, created_at, updated_at FROM commits WHERE project_id = ?1 ORDER BY commit_time DESC LIMIT 1;")?;
         extract_first!(params![project_id], stmt)
+    }
+    pub fn search(
+        project_id: u32,
+        query: Option<String>,
+        limit: u32,
+        offset: u32,
+        db: &Db,
+    ) -> Result<Vec<Self>, FownerError> {
+        let conn = db.pool.get()?;
+        let mut stmt = conn.prepare(&Commit::sql(
+            "WHERE (?2 IS NULL OR sha LIKE ?2)".to_string(),
+            Some("LIMIT ?3 OFFSET ?4".to_string()),
+        ))?;
+        let query = query.map(|query| format!("%{}%", query));
+        extract_all!(params![project_id, query, limit, offset], stmt)
     }
 }
 
