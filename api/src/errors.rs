@@ -3,6 +3,7 @@ use std::num::ParseIntError;
 use std::string::FromUtf8Error;
 use thiserror::Error;
 
+#[allow(dead_code)]
 #[derive(Error, Debug)]
 pub enum FownerError {
     #[error("Not found: {0}")]
@@ -29,8 +30,14 @@ pub enum FownerError {
     ActixError(#[from] actix_web::Error),
     #[error("Git Error: {0}")]
     GitError(String),
+    #[error("Github Error: {0}")]
+    GithubError(String),
     #[error("Invalid URI: {0}")]
     InvalidUri(#[from] InvalidUri),
+    #[error("AWC Send Request Error: {0}")]
+    AwcSendRequest(#[from] awc::error::SendRequestError),
+    #[error("AWC JSON Payload Error: {0}")]
+    AwcPayload(#[from] awc::error::JsonPayloadError),
     // #[error("Internal Error: {0}")]
     // Internal(String),
 }

@@ -7,6 +7,7 @@ use crate::db::models::file_owner::NewFileOwner;
 use crate::db::models::owner::NewOwner;
 use crate::db::models::project::{NewProject, Project};
 use crate::errors::FownerError;
+use crate::git::github::Github;
 use crate::git::manager::GitManager;
 use crate::Db;
 use chrono::NaiveDateTime;
@@ -28,17 +29,18 @@ impl<'a> Processor<'a> {
         })
     }
 
-    pub fn fetch_commits_and_update_db(&self) -> Result<usize, FownerError> {
-        let number_of_commits = self.fetch_history_and_store_data()?;
+    pub async fn fetch_commits_and_update_db(&self) -> Result<usize, FownerError> {
+        let number_of_commits = self.fetch_history_and_store_data().await?;
         Ok(number_of_commits)
     }
 
-    pub fn fetch_history_and_store_data(&self) -> Result<usize, FownerError> {
+    pub async fn fetch_history_and_store_data(&self) -> Result<usize, FownerError> {
         let latest_commit = self.get_most_recent_commit();
         let history = self.git_manager.parse_history(latest_commit)?;
         let project = self.project.clone();
         let project_id = project.id;
         let number_of_commits = history.len();
+        let github = Github::try_from(&project).ok();
         debug!("{} new commits to process", number_of_commits);
         for git_history in history {
             // For each GitHistory
@@ -62,7 +64,18 @@ impl<'a> Processor<'a> {
             .save(self.db)?;
             // 3. Create the features
             let mut features = vec![];
-            for feature in git_history.features {
+            let mut source_feature_names = vec![];
+            // Use the github tags if they're available as the primary features
+            if let Some(github) = &github {
+                if let Ok(mut labels) = github.fetch_labels_for_commit(sha.as_str()).await {
+                    source_feature_names.append(&mut labels);
+                }
+            }
+            // If there were not github tags, or no repo to pull from then use the git source commit messages
+            if source_feature_names.is_empty() {
+                source_feature_names.append(&mut git_history.features.clone());
+            }
+            for feature in source_feature_names {
                 features.push(
                     NewFeature {
                         project_id,

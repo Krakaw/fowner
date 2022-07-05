@@ -94,7 +94,7 @@ async fn main() -> Result<(), FownerError> {
                     serde_json::to_string(&processor.git_manager.parse_history(None)?)?
                 );
             } else {
-                let _ = processor.fetch_commits_and_update_db()?;
+                let _ = processor.fetch_commits_and_update_db().await?;
             }
         }
         Commands::Dotfile { repo_path, dotfile } => {

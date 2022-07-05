@@ -98,12 +98,13 @@ pub fn migrations() -> Migrations<'static> {
             r#"
             CREATE TABLE IF NOT EXISTS projects
             (
-                id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                path            TEXT NOT NULL UNIQUE,
-                name            TEXT NULL,
-                repo_url        TEXT NULL,
-                created_at      INT  NOT NULL,
-                updated_at      INT  NOT NULL
+                id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                path                TEXT NOT NULL UNIQUE,
+                name                TEXT NULL,
+                repo_url            TEXT NULL,
+                github_api_token    TEXT NULL,
+                created_at          INT  NOT NULL,
+                updated_at          INT  NOT NULL
             );
         "#,
         ),

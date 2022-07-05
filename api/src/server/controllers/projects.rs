@@ -11,11 +11,14 @@ pub async fn create(db: web::Data<Db>, json: web::Json<NewProject>) -> Result<im
     let name = if let Some(name) = new_project.name {
         Some(name)
     } else {
-        if let Some(repo_url) = repo_url {
-            Some(repo_url.split('/').last().unwrap_or_default().to_string())
-        } else {
-            None
-        }
+        repo_url.map(|repo_url| {
+            repo_url
+                .split('/')
+                .last()
+                .unwrap_or_default()
+                .to_string()
+                .replace(".git", "")
+        })
     };
 
     new_project.name = name;
@@ -34,7 +37,7 @@ pub async fn fetch_remote_repo(
     let git_manager = GitManager::init(absolute_path, project.repo_url)?;
     git_manager.fetch()?;
     let processor = Processor::new(git_manager, &db)?;
-    let commit_count = processor.fetch_commits_and_update_db()?;
+    let commit_count = processor.fetch_commits_and_update_db().await?;
     Ok(web::Json(json!({ "commits": commit_count })))
 }
 

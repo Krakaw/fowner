@@ -83,7 +83,7 @@ impl Api {
                 let public_asset_path = public_asset_path.to_string_lossy().to_string();
 
                 app.service(
-                    actix_files::Files::new("/", public_asset_path.clone())
+                    actix_files::Files::new("/", public_asset_path)
                         .index_file("index.html")
                         .default_handler(fn_service(|req: ServiceRequest| async {
                             let (req, _) = req.into_parts();
@@ -94,8 +94,7 @@ impl Api {
                                     state.public_asset_path.to_string_lossy()
                                 );
                                 let file = NamedFile::open_async(index_path).await?;
-                                let res = file.into_response(&req);
-                                res
+                                file.into_response(&req)
                             } else {
                                 HttpResponse::NotFound().finish()
                             };

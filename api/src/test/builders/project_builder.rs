@@ -8,6 +8,7 @@ pub struct ProjectBuilder {
     pub name: Option<String>,
     pub repo_url: Option<String>,
     pub path: PathBuf,
+    pub github_api_token: Option<String>,
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
@@ -18,6 +19,7 @@ impl Default for ProjectBuilder {
         Self {
             name: None,
             repo_url: None,
+            github_api_token: None,
             path,
             __non_exhaustive: (),
         }
@@ -38,6 +40,7 @@ impl ProjectBuilder {
             name: self.name,
             repo_url: self.repo_url,
             path: self.path,
+            github_api_token: self.github_api_token,
         }
         .save(db)
     }
