@@ -27,6 +27,7 @@ pub async fn create(db: web::Data<Db>, json: web::Json<NewProject>) -> Result<im
         })
     };
 
+    eprintln!("name = {:?}", name);
     new_project.name = name;
     let project = new_project.save(&db)?;
     Ok(web::Json(project))
@@ -81,10 +82,10 @@ mod tests {
             App::new()
                 .app_data(Data::new(db.clone()))
                 .app_data(Data::new(tmp_dir.clone()))
-                .route("/", web::post().to(create))
-                .route("/", web::get().to(all))
+                .route("/{id}/fetch", web::post().to(fetch_remote_repo))
                 .route("/{id}", web::get().to(load))
-                .route("/{id}/fetch", web::post().to(fetch_remote_repo)),
+                .route("/", web::post().to(create))
+                .route("/", web::get().to(all)),
         )
         .await
     }
@@ -95,22 +96,18 @@ mod tests {
         let req = test::TestRequest::post().uri("/").set_json(&json!({"name": "TestProject", "repo_url": "https://github.com/Krakaw/empty.git", "path": "empty"})).to_request();
         let project: Project = test::call_and_read_body_json(&app, req).await;
         assert_eq!(project.id, 1);
-
         let db_project = Project::load(1, &handler.db).unwrap();
         assert_eq!(project, db_project.clone());
-
         let req = test::TestRequest::get().uri("/").to_request();
         let projects: Vec<Project> = test::call_and_read_body_json(&app, req).await;
         assert_eq!(projects.len(), 1);
         assert_eq!(projects, vec![db_project.clone()]);
-
         let req = test::TestRequest::post()
             .uri("/1/fetch")
             .set_json(&json!({}))
             .to_request();
         let commits: Value = test::call_and_read_body_json(&app, req).await;
         assert_eq!(commits.get("commits").unwrap().as_u64().unwrap(), 1);
-
         let req = test::TestRequest::get().uri("/1").to_request();
         let project: DisplayProject = test::call_and_read_body_json(&app, req).await;
         assert_eq!(project.project.id, 1);

@@ -15,9 +15,23 @@ pub struct Db {
 
 impl Db {
     pub fn new(connection_string: &Path) -> Result<Self, FownerError> {
-        let sqlite_connection_manager = SqliteConnectionManager::file(connection_string);
+        let sqlite_connection_manager =
+            SqliteConnectionManager::file(connection_string).with_init(|c| {
+                c.execute_batch(
+                    r#"
+                    pragma journal_mode = WAL;
+                    pragma synchronous = normal;
+                    pragma temp_store = memory;
+                    pragma mmap_size = 30000000000;
+                    pragma page_size = 32768;
+                    "#,
+                )
+            });
         let sqlite_pool = r2d2::Pool::new(sqlite_connection_manager)?;
         let pool = Arc::new(sqlite_pool);
+
+        // Performance tuning
+
         Ok(Db { pool })
     }
 

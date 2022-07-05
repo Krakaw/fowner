@@ -38,8 +38,8 @@ pub enum FownerError {
     AwcSendRequest(#[from] awc::error::SendRequestError),
     #[error("AWC JSON Payload Error: {0}")]
     AwcPayload(#[from] awc::error::JsonPayloadError),
-    // #[error("Internal Error: {0}")]
-    // Internal(String),
+    #[error("Internal Error: {0}")]
+    Internal(String),
 }
 
 impl actix_web::error::ResponseError for FownerError {}

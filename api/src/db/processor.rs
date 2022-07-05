@@ -49,6 +49,7 @@ impl<'a> Processor<'a> {
         let github = Github::try_from(&project).ok();
         let stop_at_sha = stop_at_sha.unwrap_or_default();
         debug!("{} new commits to process", number_of_commits);
+
         for git_history in history {
             // For each GitHistory
             // 1. We need to create an Owner from the handle
