@@ -37,7 +37,7 @@ enum Commands {
         #[clap(short, long, default_value = "0.0.0.0:8080")]
         listen: SocketAddr,
         /// Monitored repository storage path
-        #[clap(short, long, default_value = "./data")]
+        #[clap(short, long, default_value = "./sources")]
         storage_path: PathBuf,
         /// Public asset path
         #[clap(short, long, default_value = "./public")]

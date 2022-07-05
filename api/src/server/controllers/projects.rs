@@ -27,7 +27,6 @@ pub async fn create(db: web::Data<Db>, json: web::Json<NewProject>) -> Result<im
         })
     };
 
-    eprintln!("name = {:?}", name);
     new_project.name = name;
     let project = new_project.save(&db)?;
     Ok(web::Json(project))
@@ -42,7 +41,7 @@ pub async fn fetch_remote_repo(
     let json = json.into_inner();
     let project_id = project_id.into_inner();
     let project = Project::load(project_id, &db)?;
-    let absolute_path = project.get_absolute_dir(&storage_path.into_inner());
+    let absolute_path = project.get_absolute_dir(&storage_path.into_inner(), true)?;
     let git_manager = GitManager::init(absolute_path, project.repo_url)?;
     git_manager.fetch()?;
     let processor = Processor::new(git_manager, &db)?;

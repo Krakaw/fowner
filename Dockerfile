@@ -26,7 +26,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir ~/.ssh && chmod 700 ~/.ssh \
     && printf "Host *\n\tStrictHostKeyChecking no\n\tUserKnownHostsFile /dev/null\n" >> ~/.ssh/config \
-    && mkdir /opt/fowner/data
+    && mkdir /opt/fowner/sources
+
 COPY --from=be_builder /usr/src/fowner/target/release/fowner /usr/local/bin/fowner
 COPY --from=fe_builder /usr/src/fowner/build /opt/fowner/public
 EXPOSE 8080

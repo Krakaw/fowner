@@ -7,12 +7,15 @@ services:
     restart: unless-stopped
     environment:
       - SSH_AUTH_SOCK=/ssh-agent
-    command: [ "fowner", "-d", "./data/.data.sqlite3", "serve" ]
+    command: [ "fowner", "-d", "./sources/.data.sqlite3", "serve" ]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
       interval: 1m30s
       timeout: 10s
       retries: 3
     volumes:
-      - "./:/opt/fowner/data"
+      - sources:/opt/fowner/sources
       - ${SSH_AUTH_SOCK}:/ssh-agent
+
+volumes:
+  sources:

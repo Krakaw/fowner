@@ -62,7 +62,7 @@ impl Project {
         format!(
             r#"
             SELECT
-                id,   name, repo_url, github_api_token, path, created_at, updated_at
+                id, name, repo_url, github_api_token, path, created_at, updated_at
                 FROM projects
                 {}
                 {}
@@ -77,12 +77,21 @@ impl Project {
         extract_all!(params![], stmt)
     }
 
-    pub fn get_absolute_dir(&self, storage_path: &Path) -> PathBuf {
+    pub fn get_absolute_dir(
+        &self,
+        storage_path: &Path,
+        create_missing: bool,
+    ) -> Result<PathBuf, FownerError> {
         let db_path = PathBuf::from(self.path.clone());
-        if db_path.is_absolute() {
-            return db_path;
+        let result_path = if db_path.is_absolute() {
+            db_path
+        } else {
+            storage_path.join(db_path)
+        };
+        if create_missing && !result_path.exists() {
+            std::fs::create_dir_all(&result_path)?;
         }
-        storage_path.join(db_path)
+        Ok(result_path.canonicalize()?)
     }
 
     pub fn get_github_api_url(&self) -> Result<String, FownerError> {
@@ -173,7 +182,8 @@ mod tests {
     use crate::db::models::project::NewProject;
     use crate::test::tests::TestHandler;
     use crate::{Db, Project};
-    use std::path::Path;
+    use std::env;
+    use std::path::{Path, PathBuf};
 
     fn add_project(db: &Db, tmp_dir: &Path, name: String) -> Project {
         let path = tmp_dir.join(&name);
@@ -269,5 +279,51 @@ mod tests {
         .unwrap();
         let gh_api_url = project.get_github_api_url().unwrap();
         assert_eq!(gh_api_url, "https://api.github.com/repos/Krakaw/fowner");
+    }
+
+    #[test]
+    fn get_absolute_dir() {
+        let handler = TestHandler::init();
+
+        let project = NewProject {
+            name: Some("Project 1".to_string()),
+            repo_url: Some("https://github.com/Krakaw/fowner.git".to_string()),
+            path: PathBuf::from("data/fowner".to_string()),
+            github_api_token: Some("abc".to_string()),
+        }
+        .save(&handler.db)
+        .unwrap();
+
+        let current_dir = env::current_dir().unwrap();
+        let current_dir = current_dir.to_str().unwrap();
+        let absolute = project
+            .get_absolute_dir(PathBuf::from("./sources").as_path(), true)
+            .unwrap();
+
+        let current_absolute = format!("{}/sources/data/fowner", current_dir);
+        assert_eq!(current_absolute, absolute.to_str().unwrap());
+
+        let absolute = project
+            .get_absolute_dir(
+                PathBuf::from(format!("{}/sources", current_dir)).as_path(),
+                false,
+            )
+            .unwrap();
+
+        assert_eq!(current_absolute, absolute.to_str().unwrap());
+        let absolute_project = NewProject {
+            name: Some("Project 2".to_string()),
+            repo_url: Some("https://github.com/Krakaw/fowner.git".to_string()),
+            path: handler.tmp_dir.clone(),
+            github_api_token: Some("abc".to_string()),
+        }
+        .save(&handler.db)
+        .unwrap();
+        assert!(absolute_project
+            .get_absolute_dir(PathBuf::from("./sources").as_path(), false)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .contains(handler.tmp_dir.to_str().unwrap()));
     }
 }
