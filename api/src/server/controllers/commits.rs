@@ -15,6 +15,8 @@ pub async fn search(
         query.q,
         query.paging.limit,
         query.paging.offset,
+        query.paging.sort,
+        query.paging.sort_dir,
         &db,
     )?;
 

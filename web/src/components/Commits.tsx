@@ -8,7 +8,7 @@ interface CommitsProps {
 function Commits(props: CommitsProps) {
 
     const {isLoading, error, data = []} = useQuery('commitData', () =>
-        fetch(`${config.apiUrl}/projects/${props.projectId}/commits`).then(res =>
+        fetch(`${config.apiUrl}/projects/${props.projectId}/commits?sort=commit_time&sort_dir=Desc`).then(res =>
             res.json()
         )
     )
