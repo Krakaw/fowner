@@ -7,7 +7,7 @@ use std::str::FromStr;
 pub struct GitHistory {
     pub handle: String,
     pub sha: String,
-    pub parent_sha: Option<String>,
+    pub parent_sha: Option<Vec<String>>,
     pub timestamp: usize,
     pub summary: String,
     pub files: Vec<String>,
@@ -59,14 +59,7 @@ impl GitHistory {
                 GitState::ParentSha => {
                     row.parent_sha = match line.trim() {
                         "" => None,
-                        _ => Some(
-                            // Always use the last commit as the parent
-                            line.trim()
-                                .split(' ')
-                                .last()
-                                .unwrap_or_default()
-                                .to_string(),
-                        ),
+                        _ => Some(line.trim().split(' ').map(String::from).collect()),
                     };
                     state = GitState::Timestamp;
                 }
@@ -182,6 +175,10 @@ README.md
             multiple_features.features,
             vec!["Core_Feature-1", "History 2"]
         );
+        assert_eq!(
+            multiple_features.parent_sha,
+            Some(vec!["c60c24663d3b67fdee8079a18cbe40c843932b48".to_string()])
+        );
 
         let extract_anywhere = history.get(2).unwrap();
         assert_eq!(extract_anywhere.features, vec!["AnyFeature"]);
@@ -190,7 +187,10 @@ README.md
         assert_eq!(last.sha, "74ebe78fe948f83d42a59d021b5a411b7ac13981");
         assert_eq!(
             last.parent_sha,
-            Some("43ce09e6475f4013fc00a6bdfefc4a53e4ddff68".to_string())
+            Some(vec![
+                "685dc3d64c54719dadd46b9b7bc4cb0a994728e1".to_string(),
+                "43ce09e6475f4013fc00a6bdfefc4a53e4ddff68".to_string()
+            ])
         );
     }
 }

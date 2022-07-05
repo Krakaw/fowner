@@ -10,7 +10,7 @@ pub struct Commit {
     pub id: u32,
     pub project_id: u32,
     pub sha: String,
-    pub parent_sha: Option<String>,
+    pub parent_sha: Option<Vec<String>>,
     pub description: String,
     pub commit_time: NaiveDateTime,
     pub created_at: NaiveDateTime,
@@ -21,7 +21,7 @@ pub struct Commit {
 pub struct NewCommit {
     pub project_id: u32,
     pub sha: String,
-    pub parent_sha: Option<String>,
+    pub parent_sha: Option<Vec<String>>,
     pub description: String,
     pub commit_time: NaiveDateTime,
 }
@@ -33,7 +33,7 @@ impl NewCommit {
         let _res = stmt.execute(params![
             self.project_id,
             self.sha,
-            self.parent_sha,
+            self.parent_sha.clone().map(|s| s.join(",")),
             self.description,
             self.commit_time.timestamp()
         ])?;
@@ -90,7 +90,10 @@ impl<'stmt> From<&Row<'stmt>> for Commit {
             id: row.get(0).unwrap(),
             project_id: row.get(1).unwrap(),
             sha: row.get(2).unwrap(),
-            parent_sha: row.get(3).unwrap(),
+            parent_sha: row
+                .get(3)
+                .map(|s: Option<String>| s.map(|s| s.split(',').map(String::from).collect()))
+                .unwrap_or_default(),
             description: row.get(4).unwrap(),
             commit_time: NaiveDateTime::from_timestamp(row.get(5).unwrap(), 0),
             created_at: NaiveDateTime::from_timestamp(row.get(6).unwrap(), 0),
@@ -132,14 +135,14 @@ mod test {
         let commit_2 = NewCommit {
             project_id: project.id,
             sha: "deadbeef2".to_string(),
-            parent_sha: Some("deadbeef".to_string()),
+            parent_sha: Some(vec!["deadbeef".to_string()]),
             description: "Feature Commit".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
         .save(&db)
         .unwrap();
         assert_eq!(commit_2.sha, "deadbeef2".to_string());
-        assert_eq!(commit_2.parent_sha, Some("deadbeef".to_string()));
+        assert_eq!(commit_2.parent_sha, Some(vec!["deadbeef".to_string()]));
     }
 
     #[test]
@@ -160,7 +163,7 @@ mod test {
         let commit_2 = NewCommit {
             project_id: project.id,
             sha: "deadbeef2".to_string(),
-            parent_sha: Some("deadbeef".to_string()),
+            parent_sha: Some(vec!["deadbeef".to_string()]),
             description: "Feature Commit".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
@@ -169,7 +172,7 @@ mod test {
         let commit_3 = NewCommit {
             project_id: project.id,
             sha: "deadbeef3".to_string(),
-            parent_sha: Some("deadbeef2".to_string()),
+            parent_sha: Some(vec!["deadbeef2".to_string()]),
             description: "Bug Commit".to_string(),
             commit_time: Utc::now()
                 .naive_utc()
@@ -187,7 +190,7 @@ mod test {
 
         let c2 = Commit::load_by_sha("deadbeef2".to_string(), &db).unwrap();
         assert_eq!(c2.sha, commit_2.sha);
-        assert_eq!(c2.parent_sha, Some(commit_1.sha));
+        assert_eq!(c2.parent_sha, Some(vec![commit_1.sha]));
 
         let c3 = Commit::fetch_latest_for_project(project.id, &db).unwrap();
         assert_eq!(c3.sha, commit_3.sha);
@@ -211,7 +214,7 @@ mod test {
         let commit_2 = NewCommit {
             project_id: project.id,
             sha: "abcdfe123".to_string(),
-            parent_sha: Some("deadbeef".to_string()),
+            parent_sha: Some(vec!["deadbeef".to_string()]),
             description: "Feature Commit".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
@@ -220,7 +223,7 @@ mod test {
         let commit_3 = NewCommit {
             project_id: project.id,
             sha: "deadbeef3".to_string(),
-            parent_sha: Some("deadbeef2".to_string()),
+            parent_sha: Some(vec!["deadbeef2".to_string(), "deadbeef".to_string()]),
             description: "Bug Commit".to_string(),
             commit_time: Utc::now()
                 .naive_utc()
@@ -242,6 +245,10 @@ mod test {
         let commits = Commit::search(project.id, None, 2, 2, &db).unwrap();
         assert_eq!(commits.len(), 1);
         assert_eq!(commits, vec![commit_3.clone()]);
+        assert_eq!(
+            commits.get(0).unwrap().parent_sha,
+            Some(vec!["deadbeef2".to_string(), "deadbeef".to_string()])
+        );
         let commits = Commit::search(project.id, Some("dfe".to_string()), 50, 0, &db).unwrap();
         assert_eq!(commits.len(), 1);
         assert_eq!(commits.first().unwrap().sha, commit_2.sha);

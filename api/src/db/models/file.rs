@@ -320,7 +320,7 @@ mod test {
         let commit_2 = NewCommit {
             project_id: project.id,
             sha: "beefdead".to_string(),
-            parent_sha: Some("deadbeef".to_string()),
+            parent_sha: Some(vec!["deadbeef".to_string()]),
             description: "Feature Commit".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
