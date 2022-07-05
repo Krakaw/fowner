@@ -3,16 +3,16 @@ services:
   api:
     image: fowner:latest
     ports:
-      - "8080:8080"
+      - "8010:8080"
     restart: unless-stopped
     environment:
       - SSH_AUTH_SOCK=/ssh-agent
-    command: [ "fowner", "serve" ]
+    command: [ "fowner", "serve"]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
       interval: 1m30s
       timeout: 10s
       retries: 3
     volumes:
-      - "./:/opt/fowner"
+      - "./:/opt/fowner/data"
       - ${SSH_AUTH_SOCK}:/ssh-agent
