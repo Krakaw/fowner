@@ -53,7 +53,6 @@ impl NewProject {
             self.path.to_string_lossy()
         ])?;
         let id = conn.last_insert_rowid();
-        eprintln!("id = {:?}", id);
         Project::load(id as u32, db)
     }
 }
