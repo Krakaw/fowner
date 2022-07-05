@@ -29,18 +29,25 @@ impl<'a> Processor<'a> {
         })
     }
 
-    pub async fn fetch_commits_and_update_db(&self) -> Result<usize, FownerError> {
-        let number_of_commits = self.fetch_history_and_store_data().await?;
+    pub async fn fetch_commits_and_update_db(
+        &self,
+        stop_at_sha: Option<String>,
+    ) -> Result<usize, FownerError> {
+        let number_of_commits = self.fetch_history_and_store_data(stop_at_sha).await?;
         Ok(number_of_commits)
     }
 
-    pub async fn fetch_history_and_store_data(&self) -> Result<usize, FownerError> {
+    pub async fn fetch_history_and_store_data(
+        &self,
+        stop_at_sha: Option<String>,
+    ) -> Result<usize, FownerError> {
         let latest_commit = self.get_most_recent_commit();
         let history = self.git_manager.parse_history(latest_commit)?;
         let project = self.project.clone();
         let project_id = project.id;
         let number_of_commits = history.len();
         let github = Github::try_from(&project).ok();
+        let stop_at_sha = stop_at_sha.unwrap_or_default();
         debug!("{} new commits to process", number_of_commits);
         for git_history in history {
             // For each GitHistory
@@ -54,6 +61,9 @@ impl<'a> Processor<'a> {
             // 2. We need to create a Commit for the hash
             let commit_date = NaiveDateTime::from_timestamp(git_history.timestamp as i64, 0);
             let sha = git_history.sha.clone();
+            if sha == stop_at_sha {
+                break;
+            }
             let commit = NewCommit {
                 project_id,
                 sha: sha.clone(),

@@ -54,6 +54,9 @@ enum Commands {
         /// Do not save history in DB
         #[clap(short, long)]
         bypass_save: bool,
+        /// Maximum commit hash to extract up to but NOT including
+        #[clap(short, long)]
+        stop_at_sha: Option<String>,
     },
     /// Generate a dotfile in the target repo containing all files and their features
     Dotfile {
@@ -80,6 +83,7 @@ async fn main() -> Result<(), FownerError> {
             repo_path,
             repo_url,
             bypass_save,
+            stop_at_sha,
         } => {
             let git_manager = GitManager {
                 path: repo_path.clone(),
@@ -94,7 +98,9 @@ async fn main() -> Result<(), FownerError> {
                     serde_json::to_string(&processor.git_manager.parse_history(None)?)?
                 );
             } else {
-                let _ = processor.fetch_commits_and_update_db().await?;
+                let _ = processor
+                    .fetch_commits_and_update_db(stop_at_sha.clone())
+                    .await?;
             }
         }
         Commands::Dotfile { repo_path, dotfile } => {

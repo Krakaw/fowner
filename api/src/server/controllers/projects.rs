@@ -2,8 +2,14 @@ use crate::db::models::project::NewProject;
 use crate::git::manager::GitManager;
 use crate::{Db, Processor, Project};
 use actix_web::{web, Responder, Result};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::path::PathBuf;
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct FetchRequest {
+    pub stop_at_sha: Option<String>,
+}
 
 pub async fn create(db: web::Data<Db>, json: web::Json<NewProject>) -> Result<impl Responder> {
     let mut new_project: NewProject = json.into_inner();
@@ -30,14 +36,18 @@ pub async fn fetch_remote_repo(
     db: web::Data<Db>,
     storage_path: web::Data<PathBuf>,
     project_id: web::Path<u32>,
+    json: web::Json<FetchRequest>,
 ) -> Result<impl Responder> {
+    let json = json.into_inner();
     let project_id = project_id.into_inner();
     let project = Project::load(project_id, &db)?;
     let absolute_path = project.get_absolute_dir(&storage_path.into_inner());
     let git_manager = GitManager::init(absolute_path, project.repo_url)?;
     git_manager.fetch()?;
     let processor = Processor::new(git_manager, &db)?;
-    let commit_count = processor.fetch_commits_and_update_db().await?;
+    let commit_count = processor
+        .fetch_commits_and_update_db(json.stop_at_sha)
+        .await?;
     Ok(web::Json(json!({ "commits": commit_count })))
 }
 
@@ -94,7 +104,10 @@ mod tests {
         assert_eq!(projects.len(), 1);
         assert_eq!(projects, vec![db_project.clone()]);
 
-        let req = test::TestRequest::post().uri("/1/fetch").to_request();
+        let req = test::TestRequest::post()
+            .uri("/1/fetch")
+            .set_json(&json!({}))
+            .to_request();
         let commits: Value = test::call_and_read_body_json(&app, req).await;
         assert_eq!(commits.get("commits").unwrap().as_u64().unwrap(), 1);
 
