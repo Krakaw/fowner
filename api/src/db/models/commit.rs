@@ -133,6 +133,7 @@ impl<'stmt> From<&Row<'stmt>> for Commit {
 #[cfg(test)]
 mod test {
     use crate::db::models::commit::{Commit, NewCommit};
+    use crate::server::paging::SortDir;
     use crate::test::builders::project_builder::ProjectBuilder;
     use crate::test::tests::TestHandler;
     use chrono::{Duration, Utc};
@@ -244,7 +245,10 @@ mod test {
             sha: "abcdfe123".to_string(),
             parent_sha: Some(vec!["deadbeef".to_string()]),
             description: "Feature Commit".to_string(),
-            commit_time: Utc::now().naive_utc(),
+            commit_time: Utc::now()
+                .naive_utc()
+                .checked_add_signed(Duration::seconds(5))
+                .unwrap(),
         }
         .save(&db)
         .unwrap();
@@ -261,7 +265,23 @@ mod test {
         .save(&db)
         .unwrap();
 
-        let commits = Commit::search(project.id, None, 10, 0, None, None, &db).unwrap();
+        let commits_desc = Commit::search(project.id, None, 10, 0, None, None, &db).unwrap();
+        assert_eq!(commits_desc.len(), 3);
+        assert_eq!(
+            commits_desc,
+            vec![commit_3.clone(), commit_2.clone(), commit_1.clone()]
+        );
+
+        let commits = Commit::search(
+            project.id,
+            None,
+            10,
+            0,
+            Some("commit_time".to_string()),
+            Some(SortDir::Asc),
+            &db,
+        )
+        .unwrap();
         assert_eq!(commits.len(), 3);
         assert_eq!(
             commits,
@@ -269,8 +289,9 @@ mod test {
         );
         let commits = Commit::search(project.id, None, 2, 0, None, None, &db).unwrap();
         assert_eq!(commits.len(), 2);
-        assert_eq!(commits, vec![commit_1.clone(), commit_2.clone()]);
-        let commits = Commit::search(project.id, None, 2, 2, None, None, &db).unwrap();
+        assert_eq!(commits, vec![commit_3.clone(), commit_2.clone()]);
+        let commits =
+            Commit::search(project.id, None, 2, 2, None, Some(SortDir::Asc), &db).unwrap();
         assert_eq!(commits.len(), 1);
         assert_eq!(commits, vec![commit_3.clone()]);
         assert_eq!(
