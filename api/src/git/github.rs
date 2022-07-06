@@ -1,5 +1,6 @@
 use crate::{FownerError, Project};
 use awc::Client;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 pub struct Github {
@@ -15,6 +16,7 @@ struct Pr {
 struct Label {
     pub name: Option<String>,
 }
+const LABEL_REGEX: &'static str = "^[fF]:\\s*";
 
 impl Github {
     pub fn new(api_url: String, api_token: Option<String>) -> Self {
@@ -41,13 +43,14 @@ impl Github {
         let mut res = req.send().await?;
         let pull_request_data: Vec<Pr> = res.json().await?;
         let mut labels = vec![];
+        let re = Regex::new(LABEL_REGEX).unwrap();
         for pr in pull_request_data {
             for label in pr.labels.iter().filter_map(|l| {
                 let name = l.name.clone().unwrap_or_default().trim().to_string();
-                if !name.starts_with("F: ") {
+                if !re.is_match(name.as_str()) {
                     return None;
                 }
-                let name = name.replace("F: ", "");
+                let name = re.replace(name.as_str(), "").to_string();
                 if !name.is_empty() {
                     Some(name)
                 } else {
@@ -83,5 +86,24 @@ mod test {
         let sha = "a69560db7e8f23e371ed384203e55d6a031cb3dc";
         let labels = github.fetch_labels_for_commit(sha).await.unwrap();
         assert_eq!(labels, vec!["API".to_string()]);
+    }
+
+    #[test]
+    fn label_regex() {
+        let re = Regex::new(LABEL_REGEX).unwrap();
+        assert!(re.is_match("F: Feature"));
+        assert!(re.is_match("F:Feature"));
+        assert!(re.is_match("F:      Feature"));
+        assert!(re.is_match("f: Feature"));
+        assert!(re.is_match("f:Feature"));
+        assert!(re.is_match("f:     Feature"));
+        assert!(!re.is_match("Feature"));
+
+        assert_eq!(re.replace("F: Feature", ""), "Feature");
+        assert_eq!(re.replace("F:      Feature", ""), "Feature");
+        assert_eq!(re.replace("F:Feature", ""), "Feature");
+        assert_eq!(re.replace("f: Feature", ""), "Feature");
+        assert_eq!(re.replace("f:Feature", ""), "Feature");
+        assert_eq!(re.replace("Feature", ""), "Feature");
     }
 }

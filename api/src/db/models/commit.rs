@@ -261,23 +261,24 @@ mod test {
         .save(&db)
         .unwrap();
 
-        let commits = Commit::search(project.id, None, 10, 0, &db).unwrap();
+        let commits = Commit::search(project.id, None, 10, 0, None, None, &db).unwrap();
         assert_eq!(commits.len(), 3);
         assert_eq!(
             commits,
             vec![commit_1.clone(), commit_2.clone(), commit_3.clone()]
         );
-        let commits = Commit::search(project.id, None, 2, 0, &db).unwrap();
+        let commits = Commit::search(project.id, None, 2, 0, None, None, &db).unwrap();
         assert_eq!(commits.len(), 2);
         assert_eq!(commits, vec![commit_1.clone(), commit_2.clone()]);
-        let commits = Commit::search(project.id, None, 2, 2, &db).unwrap();
+        let commits = Commit::search(project.id, None, 2, 2, None, None, &db).unwrap();
         assert_eq!(commits.len(), 1);
         assert_eq!(commits, vec![commit_3.clone()]);
         assert_eq!(
             commits.get(0).unwrap().parent_sha,
             Some(vec!["deadbeef2".to_string(), "deadbeef".to_string()])
         );
-        let commits = Commit::search(project.id, Some("dfe".to_string()), 50, 0, &db).unwrap();
+        let commits =
+            Commit::search(project.id, Some("dfe".to_string()), 50, 0, None, None, &db).unwrap();
         assert_eq!(commits.len(), 1);
         assert_eq!(commits.first().unwrap().sha, commit_2.sha);
     }
