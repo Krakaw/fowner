@@ -16,7 +16,7 @@ struct Pr {
 struct Label {
     pub name: Option<String>,
 }
-const LABEL_REGEX: &'static str = "^[fF]:\\s*";
+const LABEL_REGEX: &str = "^[fF]:\\s*";
 
 impl Github {
     pub fn new(api_url: String, api_token: Option<String>) -> Self {
