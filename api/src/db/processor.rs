@@ -49,7 +49,7 @@ impl<'a> Processor<'a> {
         let github = Github::try_from(&project).ok();
         let stop_at_sha = stop_at_sha.unwrap_or_default();
         debug!("{} new commits to process", number_of_commits);
-
+        let mut inc = 1;
         for git_history in history {
             // For each GitHistory
             // 1. We need to create an Owner from the handle
@@ -129,6 +129,8 @@ impl<'a> Processor<'a> {
                     .save(self.db)?;
                 }
             }
+            debug!("Processed {} of {}", inc, number_of_commits);
+            inc += 1;
         }
         Ok(number_of_commits)
     }
