@@ -36,18 +36,22 @@ pub async fn fetch_remote_repo(
     db: web::Data<Db>,
     storage_path: web::Data<PathBuf>,
     project_id: web::Path<u32>,
-    json: web::Json<FetchRequest>,
+    json: Option<web::Json<FetchRequest>>,
 ) -> Result<impl Responder> {
-    let json = json.into_inner();
+    let stop_at_sha = if let Some(json) = json {
+        let json = json.into_inner();
+        json.stop_at_sha
+    } else {
+        None
+    };
+
     let project_id = project_id.into_inner();
     let project = Project::load(project_id, &db)?;
     let absolute_path = project.get_absolute_dir(&storage_path.into_inner(), true)?;
     let git_manager = GitManager::init(absolute_path, project.repo_url)?;
     git_manager.fetch()?;
     let processor = Processor::new(git_manager, &db)?;
-    let commit_count = processor
-        .fetch_commits_and_update_db(json.stop_at_sha)
-        .await?;
+    let commit_count = processor.fetch_commits_and_update_db(stop_at_sha).await?;
     Ok(web::Json(json!({ "commits": commit_count })))
 }
 
@@ -101,10 +105,7 @@ mod tests {
         let projects: Vec<Project> = test::call_and_read_body_json(&app, req).await;
         assert_eq!(projects.len(), 1);
         assert_eq!(projects, vec![db_project.clone()]);
-        let req = test::TestRequest::post()
-            .uri("/1/fetch")
-            .set_json(&json!({}))
-            .to_request();
+        let req = test::TestRequest::post().uri("/1/fetch").to_request();
         let commits: Value = test::call_and_read_body_json(&app, req).await;
         assert_eq!(commits.get("commits").unwrap().as_u64().unwrap(), 1);
         let req = test::TestRequest::get().uri("/1").to_request();
@@ -112,5 +113,11 @@ mod tests {
         assert_eq!(project.project.id, 1);
         assert!(project.features.is_empty());
         assert!(project.files.is_empty());
+        let req = test::TestRequest::post()
+            .uri("/1/fetch")
+            .set_json(&json!({"stop_at_sha": "no_stop"}))
+            .to_request();
+        let commits: Value = test::call_and_read_body_json(&app, req).await;
+        assert_eq!(commits.get("commits").unwrap().as_u64().unwrap(), 0);
     }
 }
