@@ -10,7 +10,7 @@ extern crate log;
 use crate::db::models::file::File;
 use crate::db::models::project::Project;
 use crate::db::processor::Processor;
-use crate::db::Db;
+use crate::db::{Connection, Db};
 use crate::errors::FownerError;
 use crate::git::manager::GitManager;
 use clap::{Parser, Subcommand};
@@ -57,6 +57,9 @@ enum Commands {
         /// Maximum commit hash to extract up to but NOT including
         #[clap(short, long)]
         stop_at_sha: Option<String>,
+        /// Fetch github labels
+        #[clap(short, long)]
+        fetch_github_labels: bool,
     },
     /// Generate a dotfile in the target repo containing all files and their features
     Dotfile {
@@ -77,19 +80,22 @@ async fn main() -> Result<(), FownerError> {
     let db = Db::new(&cli.database_path)?;
     // Init runs the migrations on every run
     db.init()?;
-
+    let mut conn = db.pool.get()?;
+    let tx = conn.transaction()?;
+    let conn = Connection::from(tx);
     match &cli.command {
         Commands::History {
             repo_path,
             repo_url,
             bypass_save,
             stop_at_sha,
+            fetch_github_labels,
         } => {
             let git_manager = GitManager {
                 path: repo_path.clone(),
                 url: repo_url.clone(),
             };
-            let processor = Processor::new(git_manager, &db)?;
+            let processor = Processor::new(git_manager, &conn)?;
             // Fetch the commits from the local repository and insert the required records
             // Projects, Owners, Files, Commits, File Owners
             if *bypass_save {
@@ -99,14 +105,14 @@ async fn main() -> Result<(), FownerError> {
                 );
             } else {
                 let _ = processor
-                    .fetch_commits_and_update_db(stop_at_sha.clone())
+                    .fetch_commits_and_update_db(stop_at_sha.clone(), *fetch_github_labels)
                     .await?;
             }
         }
         Commands::Dotfile { repo_path, dotfile } => {
-            let project = Project::load_by_path(repo_path, &db)?;
+            let project = Project::load_by_path(repo_path, &conn)?;
             let dotfile_path = repo_path.join(dotfile);
-            let path = File::generate_feature_file(project.id, dotfile_path, &db)?;
+            let path = File::generate_feature_file(project.id, dotfile_path, &conn)?;
 
             eprintln!("dotfile path = {}", path.canonicalize()?.to_string_lossy());
         }
@@ -119,6 +125,7 @@ async fn main() -> Result<(), FownerError> {
                 .await?
         }
     }
+    conn.transaction()?.commit()?;
 
     Ok(())
 }

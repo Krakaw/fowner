@@ -1,6 +1,6 @@
 use crate::db::models::commit::Commit;
 use crate::server::controllers::SearchRequest;
-use crate::Db;
+use crate::{Connection, Db};
 use actix_web::{web, Responder, Result};
 
 pub async fn search(
@@ -10,6 +10,8 @@ pub async fn search(
 ) -> Result<impl Responder> {
     let query = query.into_inner();
     let project_id = project_id.into_inner();
+    let db = db.get_ref();
+    let conn = Connection::try_from(db)?;
     let commits = Commit::search(
         project_id,
         query.q,
@@ -17,7 +19,7 @@ pub async fn search(
         query.paging.offset,
         query.paging.sort,
         query.paging.sort_dir,
-        &db,
+        &conn,
     )?;
 
     Ok(web::Json(commits))

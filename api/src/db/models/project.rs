@@ -1,8 +1,9 @@
 use crate::db::models::feature::Feature;
 use crate::db::models::{extract_all, extract_first};
+use crate::db::Connection;
 use crate::errors::FownerError;
 use crate::git::manager::GitManager;
-use crate::{Db, File};
+use crate::File;
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
@@ -35,11 +36,10 @@ pub struct DisplayProject {
 }
 
 impl NewProject {
-    pub fn save(&self, db: &Db) -> Result<Project, FownerError> {
-        if let Ok(project) = Project::load_by_path(&self.path, db) {
+    pub fn save(&self, conn: &Connection) -> Result<Project, FownerError> {
+        if let Ok(project) = Project::load_by_path(&self.path, conn) {
             return Ok(project);
         }
-        let conn = db.pool.get()?;
         let mut stmt = conn.prepare(
             r#"
         INSERT INTO projects (name, repo_url, github_api_token, path, created_at, updated_at)
@@ -53,7 +53,7 @@ impl NewProject {
             self.path.to_string_lossy()
         ])?;
         let id = conn.last_insert_rowid();
-        Project::load(id as u32, db)
+        Project::load(id as u32, conn)
     }
 }
 
@@ -71,8 +71,7 @@ impl Project {
             limit_clause.unwrap_or_default()
         )
     }
-    pub fn all(db: &Db) -> Result<Vec<Self>, FownerError> {
-        let conn = db.pool.get()?;
+    pub fn all(conn: &Connection) -> Result<Vec<Self>, FownerError> {
         let mut stmt = conn.prepare(&Project::sql(None, None))?;
         extract_all!(params![], stmt)
     }
@@ -123,15 +122,13 @@ impl Project {
         }
     }
 
-    pub fn load(id: u32, db: &Db) -> Result<Self, FownerError> {
-        let conn = db.pool.get()?;
+    pub fn load(id: u32, conn: &Connection) -> Result<Self, FownerError> {
         let mut stmt = conn.prepare(&Project::sql(Some("WHERE id = ?1".to_string()), None))?;
         extract_first!(params![id], stmt)
     }
 
     /// Loads by an exact path match
-    pub fn load_by_path(path: &Path, db: &Db) -> Result<Self, FownerError> {
-        let conn = db.pool.get()?;
+    pub fn load_by_path(path: &Path, conn: &Connection) -> Result<Self, FownerError> {
         let mut stmt = conn.prepare(&Project::sql(
             Some("WHERE LOWER(path) LIKE ?1".to_string()),
             Some("LIMIT 1".to_string()),
@@ -141,9 +138,9 @@ impl Project {
         Ok(rows)
     }
 
-    pub fn for_display(&self, db: &Db) -> Result<DisplayProject, FownerError> {
-        let features = Feature::load_by_project(self.id, db)?;
-        let files = File::all(self.id, db)?;
+    pub fn for_display(&self, conn: &Connection) -> Result<DisplayProject, FownerError> {
+        let features = Feature::load_by_project(self.id, conn)?;
+        let files = File::all(self.id, conn)?;
         Ok(DisplayProject {
             project: self.clone(),
             features,
@@ -181,11 +178,11 @@ impl From<&GitManager> for NewProject {
 mod tests {
     use crate::db::models::project::NewProject;
     use crate::test::tests::TestHandler;
-    use crate::{Db, Project};
+    use crate::{Connection, Project};
     use std::env;
     use std::path::{Path, PathBuf};
 
-    fn add_project(db: &Db, tmp_dir: &Path, name: String) -> Project {
+    fn add_project(conn: &Connection, tmp_dir: &Path, name: String) -> Project {
         let path = tmp_dir.join(&name);
         NewProject {
             name: Some(name),
@@ -193,7 +190,7 @@ mod tests {
             path,
             github_api_token: None,
         }
-        .save(db)
+        .save(conn)
         .unwrap()
     }
 
@@ -201,11 +198,13 @@ mod tests {
     fn create_by_path_is_unique() {
         let handler = TestHandler::init();
         let db = &handler.db;
+        let conn = &Connection::try_from(db).unwrap();
+
         let tmp_dir = &handler.tmp_dir;
-        let project1 = add_project(db, tmp_dir, "Project_1".to_string());
-        let project2 = add_project(db, tmp_dir, "Project_1".to_string());
+        let project1 = add_project(conn, tmp_dir, "Project_1".to_string());
+        let project2 = add_project(conn, tmp_dir, "Project_1".to_string());
         assert_eq!(project1, project2);
-        let db_projects = Project::load_by_path(tmp_dir.join("Project_1").as_path(), db).unwrap();
+        let db_projects = Project::load_by_path(tmp_dir.join("Project_1").as_path(), conn).unwrap();
         assert_eq!(project1, db_projects);
     }
 
@@ -213,10 +212,12 @@ mod tests {
     fn all() {
         let handler = TestHandler::init();
         let db = &handler.db;
+        let conn = &Connection::try_from(db).unwrap();
+
         let tmp_dir = &handler.tmp_dir;
-        let project1 = add_project(db, tmp_dir, "Project_1".to_string());
-        let project2 = add_project(db, tmp_dir, "Project_2".to_string());
-        let db_projects = Project::all(db).unwrap();
+        let project1 = add_project(conn, tmp_dir, "Project_1".to_string());
+        let project2 = add_project(conn, tmp_dir, "Project_2".to_string());
+        let db_projects = Project::all(conn).unwrap();
         assert_eq!(db_projects.len(), 2);
         assert_eq!(project1, db_projects[0]);
         assert_eq!(project2, db_projects[1]);
@@ -226,10 +227,11 @@ mod tests {
     fn load() {
         let handler = TestHandler::init();
         let db = &handler.db;
+        let conn = &Connection::try_from(db).unwrap();
         let tmp_dir = &handler.tmp_dir;
-        let _project1 = add_project(db, tmp_dir, "Project_1".to_string());
-        let project2 = add_project(db, tmp_dir, "Project_2".to_string());
-        let db_projects = Project::load(2, db).unwrap();
+        let _project1 = add_project(conn, tmp_dir, "Project_1".to_string());
+        let project2 = add_project(conn, tmp_dir, "Project_2".to_string());
+        let db_projects = Project::load(2, conn).unwrap();
         assert_eq!(project2, db_projects);
     }
 
@@ -237,13 +239,16 @@ mod tests {
     fn load_by_path() {
         let handler = TestHandler::init();
         let db = &handler.db;
+        let conn = &Connection::try_from(db).unwrap();
+
         let tmp_dir = &handler.tmp_dir;
-        let project1 = add_project(db, tmp_dir, "Project_1".to_string());
-        let _project2 = add_project(db, tmp_dir, "Project_2".to_string());
-        let db_projects = Project::load_by_path(tmp_dir.join("Project_1").as_path(), db).unwrap();
+        let project1 = add_project(conn, tmp_dir, "Project_1".to_string());
+        let _project2 = add_project(conn, tmp_dir, "Project_2".to_string());
+        let db_projects = Project::load_by_path(tmp_dir.join("Project_1").as_path(), conn).unwrap();
         assert_eq!(project1, db_projects);
         // Load non existent
-        let not_found_db_projects = Project::load_by_path(tmp_dir.join("Project_x").as_path(), db);
+        let not_found_db_projects =
+            Project::load_by_path(tmp_dir.join("Project_x").as_path(), conn);
         assert!(not_found_db_projects.is_err());
     }
 
@@ -251,6 +256,7 @@ mod tests {
     fn github_token() {
         let handler = TestHandler::init();
         let db = &handler.db;
+        let conn = &Connection::try_from(db).unwrap();
         let tmp_dir = &handler.tmp_dir;
         NewProject {
             name: Some("Project 1".to_string()),
@@ -258,9 +264,9 @@ mod tests {
             path: tmp_dir.to_path_buf(),
             github_api_token: Some("abc".to_string()),
         }
-        .save(db)
+        .save(conn)
         .unwrap();
-        let db_project = Project::load(1, db).unwrap();
+        let db_project = Project::load(1, conn).unwrap();
         assert_eq!(db_project.github_api_token, Some("abc".to_string()));
     }
 
@@ -268,6 +274,8 @@ mod tests {
     fn get_github_api_url() {
         let handler = TestHandler::init();
         let db = &handler.db;
+        let conn = &Connection::try_from(db).unwrap();
+
         let tmp_dir = &handler.tmp_dir;
         let project = NewProject {
             name: Some("Project 1".to_string()),
@@ -275,7 +283,7 @@ mod tests {
             path: tmp_dir.to_path_buf(),
             github_api_token: Some("abc".to_string()),
         }
-        .save(db)
+        .save(conn)
         .unwrap();
         let gh_api_url = project.get_github_api_url().unwrap();
         assert_eq!(gh_api_url, "https://api.github.com/repos/Krakaw/fowner");
@@ -284,6 +292,9 @@ mod tests {
     #[test]
     fn get_absolute_dir() {
         let handler = TestHandler::init();
+        let db = &handler.db;
+
+        let conn = Connection::try_from(db).unwrap();
 
         let project = NewProject {
             name: Some("Project 1".to_string()),
@@ -291,7 +302,7 @@ mod tests {
             path: PathBuf::from("data/fowner".to_string()),
             github_api_token: Some("abc".to_string()),
         }
-        .save(&handler.db)
+        .save(&conn)
         .unwrap();
 
         let current_dir = env::current_dir().unwrap();
@@ -317,7 +328,7 @@ mod tests {
             path: handler.tmp_dir.clone(),
             github_api_token: Some("abc".to_string()),
         }
-        .save(&handler.db)
+        .save(&conn)
         .unwrap();
         assert!(absolute_project
             .get_absolute_dir(PathBuf::from("./sources").as_path(), false)

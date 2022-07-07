@@ -1,4 +1,5 @@
 use crate::db::models::{extract_all, extract_first};
+use crate::db::Connection;
 use crate::errors::FownerError;
 use crate::Db;
 use chrono::NaiveDateTime;
@@ -43,8 +44,7 @@ impl Owner {
         extract_first!(params![id], stmt)
     }
 
-    pub fn load_by_handle(handle: String, db: &Db) -> Result<Self, FownerError> {
-        let conn = db.pool.get()?;
+    pub fn load_by_handle(handle: String, conn: &Connection) -> Result<Self, FownerError> {
         let mut stmt = conn.prepare("SELECT id, handle, name, primary_owner_id, created_at, updated_at FROM owners WHERE LOWER(handle) = LOWER(?1);")?;
         extract_first!(params![handle], stmt)
     }
@@ -63,14 +63,13 @@ impl Owner {
 }
 
 impl NewOwner {
-    pub fn save(&self, db: &Db) -> Result<Owner, FownerError> {
-        if let Ok(owner) = Owner::load_by_handle(self.handle.clone(), db) {
+    pub fn save(&self, conn: &Connection) -> Result<Owner, FownerError> {
+        if let Ok(owner) = Owner::load_by_handle(self.handle.clone(), conn) {
             return Ok(owner);
         };
-        let conn = db.pool.get()?;
         let mut stmt = conn.prepare("INSERT INTO owners (handle, name, primary_owner_id, created_at, updated_at) VALUES (?1, ?2, ?3, strftime('%s','now'), strftime('%s','now'))")?;
         let _res = stmt.execute(params![self.handle, self.name, self.primary_owner_id])?;
-        Owner::load_by_handle(self.handle.clone(), db)
+        Owner::load_by_handle(self.handle.clone(), conn)
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::db::models::feature::NewFeature;
 use crate::db::models::file_feature::{FileFeature, NewFileFeature};
 use crate::db::models::{extract_all, extract_first};
+use crate::db::Connection;
 use crate::errors::FownerError;
 use crate::Db;
 use chrono::NaiveDateTime;
@@ -57,14 +58,16 @@ impl File {
             limit_clause.unwrap_or_default()
         )
     }
-    pub fn all(project_id: u32, db: &Db) -> Result<Vec<File>, FownerError> {
-        let conn = db.pool.get()?;
+    pub fn all(project_id: u32, conn: &Connection) -> Result<Vec<File>, FownerError> {
         let mut stmt = conn.prepare(&File::sql(None, None))?;
         extract_all!(params![project_id], stmt)
     }
 
-    pub fn load_by_path(project_id: u32, path: String, db: &Db) -> Result<File, FownerError> {
-        let conn = db.pool.get()?;
+    pub fn load_by_path(
+        project_id: u32,
+        path: String,
+        conn: &Connection,
+    ) -> Result<File, FownerError> {
         let mut stmt = conn.prepare(&File::sql(Some("AND path = ?2".to_string()), None))?;
         extract_first!(params![project_id, path], stmt)
     }
@@ -85,18 +88,22 @@ impl File {
         extract_all!(params![project_id, query, limit, offset], stmt)
     }
 
-    pub fn add_feature(&self, feature_id: u32, db: &Db) -> Result<FileFeature, FownerError> {
+    pub fn add_feature(
+        &self,
+        feature_id: u32,
+        conn: &Connection,
+    ) -> Result<FileFeature, FownerError> {
         NewFileFeature {
             file_id: self.id,
             feature_id,
         }
-        .save(db)
+        .save(conn)
     }
 
     pub fn generate_feature_file(
         project_id: u32,
         dotfile: PathBuf,
-        db: &Db,
+        conn: &Connection,
     ) -> Result<PathBuf, FownerError> {
         // Load any existing file
         let existing_contents = if dotfile.exists() {
@@ -124,7 +131,7 @@ impl File {
             })
             .collect::<Vec<(&str, Vec<&str>)>>();
 
-        let files = Self::all(project_id, db)?;
+        let files = Self::all(project_id, conn)?;
         for existing_row in existing_path_features {
             let db_file =
                 if let Some(db_file) = files.iter().find(|r| r.path == existing_row.0).cloned() {
@@ -135,7 +142,7 @@ impl File {
                         project_id,
                         path: existing_row.0.to_string(),
                     }
-                    .save(db)?
+                    .save(conn)?
                 };
             for feature_str in existing_row.1 {
                 // Check if the features exist, if not create them and attach them to the File
@@ -144,11 +151,11 @@ impl File {
                     name: feature_str.to_string(),
                     description: None,
                 }
-                .save(db)?;
-                db_file.add_feature(feature.id, db)?;
+                .save(conn)?;
+                db_file.add_feature(feature.id, conn)?;
             }
         }
-        let mut files = Self::all(project_id, db)?;
+        let mut files = Self::all(project_id, conn)?;
         files.sort_by(|a, b| a.path.cmp(&b.path));
         std::fs::write(
             dotfile.clone(),
@@ -167,14 +174,13 @@ pub struct NewFile {
 }
 
 impl NewFile {
-    pub fn save(&self, db: &Db) -> Result<File, FownerError> {
-        if let Ok(file) = File::load_by_path(self.project_id, self.path.clone(), db) {
+    pub fn save(&self, conn: &Connection) -> Result<File, FownerError> {
+        if let Ok(file) = File::load_by_path(self.project_id, self.path.clone(), conn) {
             return Ok(file);
         };
-        let conn = db.pool.get()?;
         let mut stmt = conn.prepare("INSERT INTO files (project_id, path, created_at, updated_at) VALUES (?1, ?2, strftime('%s','now'), strftime('%s','now'))")?;
         let _res = stmt.execute(params![self.project_id.clone(), self.path.clone()])?;
-        File::load_by_path(self.project_id, self.path.clone(), db)
+        File::load_by_path(self.project_id, self.path.clone(), conn)
     }
 }
 
@@ -217,6 +223,7 @@ mod test {
     use crate::db::models::file_feature::NewFileFeature;
     use crate::db::models::file_owner::NewFileOwner;
     use crate::db::models::owner::NewOwner;
+    use crate::db::Connection;
     use crate::test::builders::project_builder::ProjectBuilder;
     use crate::test::tests::TestHandler;
     use crate::File;
@@ -226,13 +233,14 @@ mod test {
     fn save() {
         let handler = TestHandler::init();
         let db = &handler.db;
+        let conn = &Connection::try_from(db).unwrap();
         let tmp_dir = &handler.tmp_dir;
-        let project = ProjectBuilder::with_path(tmp_dir).build(db).unwrap();
+        let project = ProjectBuilder::with_path(tmp_dir).build(conn).unwrap();
         let file = NewFile {
             project_id: project.id,
             path: "src/main.rs".to_string(),
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
         assert_eq!(file.id, 1);
         assert_eq!(file.project_id, project.id);
@@ -246,7 +254,7 @@ mod test {
             project_id: project.id,
             path: "src/main.rs".to_string(),
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
         assert_eq!(file.id, 1);
     }
@@ -255,8 +263,9 @@ mod test {
     fn load() {
         let handler = TestHandler::init();
         let db = &handler.db;
+        let conn = &Connection::try_from(db).unwrap();
         let tmp_dir = &handler.tmp_dir;
-        let project = ProjectBuilder::with_path(tmp_dir).build(db).unwrap();
+        let project = ProjectBuilder::with_path(tmp_dir).build(conn).unwrap();
         let commit_1 = NewCommit {
             project_id: project.id,
             sha: "deadbeef".to_string(),
@@ -264,41 +273,41 @@ mod test {
             description: "Initial Commit".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
         let feature = NewFeature {
             project_id: project.id,
             name: "Test".to_string(),
             description: None,
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
         let owner = NewOwner {
             handle: "Krakaw".to_string(),
             name: None,
             primary_owner_id: None,
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
         let file = NewFile {
             project_id: project.id,
             path: "src/main.rs".to_string(),
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
 
         NewFileFeature {
             file_id: file.id,
             feature_id: feature.id,
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
 
         FileCommit {
             file_id: file.id,
             commit_id: commit_1.id,
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
         NewFileOwner {
             file_id: file.id,
@@ -306,10 +315,10 @@ mod test {
             action_date: Utc::now().naive_utc(),
             sha: commit_1.sha,
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
 
-        let db_file = File::load_by_path(project.id, "src/main.rs".to_string(), &db).unwrap();
+        let db_file = File::load_by_path(project.id, "src/main.rs".to_string(), &conn).unwrap();
         assert_eq!(db_file.id, 1);
         assert_eq!(db_file.project_id, 1);
         assert_eq!(db_file.path, "src/main.rs".to_string());
@@ -324,21 +333,21 @@ mod test {
             description: "Feature Commit".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
 
         FileCommit {
             file_id: file.id,
             commit_id: commit_2.id,
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
         let owner = NewOwner {
             handle: "NewOwner".to_string(),
             name: None,
             primary_owner_id: None,
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
 
         let feature = NewFeature {
@@ -346,13 +355,13 @@ mod test {
             name: "New Feature".to_string(),
             description: None,
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
         NewFileFeature {
             file_id: file.id,
             feature_id: feature.id,
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
         NewFileOwner {
             file_id: file.id,
@@ -360,10 +369,10 @@ mod test {
             action_date: Utc::now().naive_utc(),
             sha: commit_2.sha,
         }
-        .save(&db)
+        .save(&conn)
         .unwrap();
 
-        let db_file = File::load_by_path(project.id, "src/main.rs".to_string(), &db).unwrap();
+        let db_file = File::load_by_path(project.id, "src/main.rs".to_string(), &conn).unwrap();
         assert_eq!(
             db_file.feature_names,
             vec!["Test".to_string(), "New Feature".to_string()]

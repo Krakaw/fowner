@@ -1,6 +1,6 @@
 use crate::db::models::{extract_all, extract_first};
+use crate::db::Connection;
 use crate::errors::FownerError;
-use crate::Db;
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
@@ -22,18 +22,17 @@ pub struct NewFeature {
 }
 
 impl NewFeature {
-    pub fn save(&self, db: &Db) -> Result<Feature, FownerError> {
-        if let Ok(feature) = Feature::load_by_name(self.project_id, self.name.clone(), db) {
+    pub fn save(&self, conn: &Connection) -> Result<Feature, FownerError> {
+        if let Ok(feature) = Feature::load_by_name(self.project_id, self.name.clone(), conn) {
             return Ok(feature);
         }
-        let conn = db.pool.get()?;
         let mut stmt = conn.prepare("INSERT INTO features (project_id, name, description, created_at, updated_at) VALUES (?1, ?2, ?3, strftime('%s','now'), strftime('%s','now'))")?;
         let _res = stmt.execute(params![
             self.project_id.clone(),
             self.name.clone(),
             self.description.clone()
         ])?;
-        Feature::load(conn.last_insert_rowid() as u32, db)
+        Feature::load(conn.last_insert_rowid() as u32, conn)
     }
 }
 impl Feature {
@@ -47,20 +46,24 @@ impl Feature {
             where_clause.unwrap_or_default()
         )
     }
-    pub fn load(id: u32, db: &Db) -> Result<Feature, FownerError> {
-        let conn = db.pool.get()?;
+    pub fn load(id: u32, conn: &Connection) -> Result<Feature, FownerError> {
         let mut stmt = conn.prepare(&Feature::sql(Some("WHERE id = ?1".to_string())))?;
         extract_first!(params![id], stmt)
     }
-    pub fn load_by_name(project_id: u32, name: String, db: &Db) -> Result<Feature, FownerError> {
-        let conn = db.pool.get()?;
+    pub fn load_by_name(
+        project_id: u32,
+        name: String,
+        conn: &Connection,
+    ) -> Result<Feature, FownerError> {
         let mut stmt = conn.prepare(&Feature::sql(Some(
             "WHERE project_id = ?1 AND name LIKE ?2".to_string(),
         )))?;
         extract_first!(params![project_id, name], stmt)
     }
-    pub fn load_by_project(project_id: u32, db: &Db) -> Result<Vec<Feature>, FownerError> {
-        let conn = db.pool.get()?;
+    pub fn load_by_project(
+        project_id: u32,
+        conn: &Connection,
+    ) -> Result<Vec<Feature>, FownerError> {
         let mut stmt = conn.prepare(&Feature::sql(Some("WHERE project_id = ?1;".to_string())))?;
         extract_all!(params![project_id], stmt)
     }

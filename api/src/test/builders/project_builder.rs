@@ -1,5 +1,5 @@
 use crate::db::models::project::NewProject;
-use crate::{Db, FownerError, Project};
+use crate::{Connection, FownerError, Project};
 use std::env::temp_dir;
 use std::path::{Path, PathBuf};
 
@@ -35,13 +35,13 @@ impl ProjectBuilder {
         }
     }
 
-    pub fn build(self, db: &Db) -> Result<Project, FownerError> {
+    pub fn build(self, conn: &Connection) -> Result<Project, FownerError> {
         NewProject {
             name: self.name,
             repo_url: self.repo_url,
             path: self.path,
             github_api_token: self.github_api_token,
         }
-        .save(db)
+        .save(conn)
     }
 }
