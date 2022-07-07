@@ -3,7 +3,8 @@ pub mod models;
 pub mod processor;
 
 use crate::FownerError;
-use r2d2::Pool;
+use r2d2::{Pool, PooledConnection};
+use r2d2_sqlite::rusqlite::{Statement, Transaction};
 use r2d2_sqlite::SqliteConnectionManager;
 use std::path::Path;
 use std::sync::Arc;
@@ -40,5 +41,48 @@ impl Db {
         let migrations = migrations::migrations();
         migrations.to_latest(&mut connection)?;
         Ok(())
+    }
+}
+
+pub enum Connection<'a> {
+    Pooled(PooledConnection<SqliteConnectionManager>),
+    Transaction(Transaction<'a>),
+}
+
+impl<'a> TryFrom<&Db> for Connection<'a> {
+    type Error = FownerError;
+
+    fn try_from(db: &Db) -> Result<Self, Self::Error> {
+        Ok(Self::Pooled(db.pool.get()?))
+    }
+}
+
+impl<'a> From<Transaction<'a>> for Connection<'a> {
+    fn from(transaction: Transaction<'a>) -> Self {
+        Self::Transaction(transaction)
+    }
+}
+impl<'a> Connection<'a> {
+    #[inline]
+    pub fn prepare(&self, query: &str) -> Result<Statement, FownerError> {
+        match self {
+            Connection::Pooled(client) => Ok(client.prepare(query)?),
+            Connection::Transaction(transaction) => Ok(transaction.prepare(query)?),
+        }
+    }
+
+    #[inline]
+    pub fn last_insert_rowid(&self) -> i64 {
+        match self {
+            Connection::Pooled(client) => client.last_insert_rowid(),
+            Connection::Transaction(transaction) => transaction.last_insert_rowid(),
+        }
+    }
+
+    pub fn transaction(self) -> Result<Transaction<'a>, FownerError> {
+        match self {
+            Connection::Pooled(_) => Err(FownerError::Internal("Not a transaction".to_string())),
+            Connection::Transaction(t) => Ok(t),
+        }
     }
 }

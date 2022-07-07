@@ -1,6 +1,7 @@
 use crate::db::models::project::NewProject;
+use crate::db::Connection;
 use crate::git::manager::GitManager;
-use crate::{Db, Processor, Project};
+use crate::{Db, FownerError, Processor, Project};
 use actix_web::{web, Responder, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -9,10 +10,13 @@ use std::path::PathBuf;
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct FetchRequest {
     pub stop_at_sha: Option<String>,
+    pub skip_github_labels: Option<bool>,
 }
 
 pub async fn create(db: web::Data<Db>, json: web::Json<NewProject>) -> Result<impl Responder> {
     let mut new_project: NewProject = json.into_inner();
+    let db = db.get_ref();
+    let conn = Connection::try_from(db)?;
     let repo_url = new_project.repo_url.clone();
     let name = if let Some(name) = new_project.name {
         Some(name)
@@ -28,7 +32,7 @@ pub async fn create(db: web::Data<Db>, json: web::Json<NewProject>) -> Result<im
     };
 
     new_project.name = name;
-    let project = new_project.save(&db)?;
+    let project = new_project.save(&conn)?;
     Ok(web::Json(project))
 }
 
@@ -40,30 +44,43 @@ pub async fn fetch_remote_repo(
 ) -> Result<impl Responder> {
     let json = json.into_inner();
     let stop_at_sha = json.stop_at_sha;
-
+    let skip_github_labels = json.skip_github_labels.unwrap_or_default();
+    let db = db.get_ref();
+    let mut db = db.pool.get().map_err(|e| FownerError::R2d2(e))?;
+    let tx = db.transaction().map_err(|e| FownerError::Rusqlite(e))?;
+    let conn = Connection::from(tx);
     let project_id = project_id.into_inner();
-    let project = Project::load(project_id, &db)?;
+    let project = Project::load(project_id, &conn)?;
     let absolute_path = project.get_absolute_dir(&storage_path.into_inner(), true)?;
     let git_manager = GitManager::init(absolute_path, project.repo_url.clone())?;
     git_manager.fetch()?;
     let processor = Processor {
-        db: &db,
+        conn: &conn,
         git_manager,
         project,
     };
-    let commit_count = processor.fetch_commits_and_update_db(stop_at_sha).await?;
+    let commit_count = processor
+        .fetch_commits_and_update_db(stop_at_sha, skip_github_labels)
+        .await?;
+    conn.transaction()?
+        .commit()
+        .map_err(|e| FownerError::Rusqlite(e))?;
     Ok(web::Json(json!({ "commits": commit_count })))
 }
 
 pub async fn all(db: web::Data<Db>) -> Result<impl Responder> {
-    let projects = Project::all(&db)?;
+    let db = db.get_ref();
+    let conn = Connection::try_from(db)?;
+    let projects = Project::all(&conn)?;
     Ok(web::Json(projects))
 }
 
 pub async fn load(db: web::Data<Db>, path: web::Path<u32>) -> Result<impl Responder> {
     let project_id = path.into_inner();
-    let project = Project::load(project_id, &db)?;
-    let display_project = project.for_display(&db)?;
+    let db = db.get_ref();
+    let conn = Connection::try_from(db)?;
+    let project = Project::load(project_id, &conn)?;
+    let display_project = project.for_display(&conn)?;
     Ok(web::Json(json!(display_project)))
 }
 
@@ -95,24 +112,29 @@ mod tests {
     #[actix_web::test]
     async fn test_controller() {
         let handler = TestHandler::init();
-        let app = init(&handler.db, &handler.tmp_dir).await;
+        let db = &handler.db;
+        let conn = Connection::try_from(db).unwrap();
+        let app = init(&db, &handler.tmp_dir).await;
         let req = test::TestRequest::post().uri("/").set_json(&json!({"name": "TestProject", "repo_url": "https://github.com/Krakaw/empty.git", "path": "empty"})).to_request();
         let project: Project = test::call_and_read_body_json(&app, req).await;
         assert_eq!(project.id, 1);
-        let db_project = Project::load(1, &handler.db).unwrap();
+        let db_project = Project::load(1, &conn).unwrap();
         assert_eq!(project, db_project.clone());
         let req = test::TestRequest::get().uri("/").to_request();
         let projects: Vec<Project> = test::call_and_read_body_json(&app, req).await;
         assert_eq!(projects.len(), 1);
         assert_eq!(projects, vec![db_project.clone()]);
-        let req = test::TestRequest::post().uri("/1/fetch").to_request();
+        let req = test::TestRequest::post()
+            .uri("/1/fetch")
+            .set_json(json!({}))
+            .to_request();
         let commits: Value = test::call_and_read_body_json(&app, req).await;
         assert_eq!(commits.get("commits").unwrap().as_u64().unwrap(), 1);
         let req = test::TestRequest::get().uri("/1").to_request();
         let project: DisplayProject = test::call_and_read_body_json(&app, req).await;
         assert_eq!(project.project.id, 1);
         assert!(project.features.is_empty());
-        assert!(project.files.is_empty());
+        assert_eq!(project.files.len(), 1);
         let req = test::TestRequest::post()
             .uri("/1/fetch")
             .set_json(&json!({"stop_at_sha": "no_stop"}))

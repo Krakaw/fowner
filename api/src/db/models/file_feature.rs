@@ -1,8 +1,8 @@
 use crate::db::models::commit::Commit;
 use crate::db::models::extract_first;
 use crate::db::models::feature::Feature;
+use crate::db::Connection;
 use crate::errors::FownerError;
-use crate::Db;
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 
@@ -20,9 +20,12 @@ pub struct NewFileFeature {
 }
 
 impl FileFeature {
-    pub fn load(file_id: u32, feature_id: u32, db: &Db) -> Result<FileFeature, FownerError> {
+    pub fn load(
+        file_id: u32,
+        feature_id: u32,
+        conn: &Connection,
+    ) -> Result<FileFeature, FownerError> {
         let sql = "SELECT file_id, feature_id, created_at, updated_at FROM file_features WHERE file_id = ?1 AND feature_id = ?2";
-        let conn = db.pool.get()?;
         let mut stmt = conn.prepare(sql)?;
         extract_first!(params![file_id, feature_id], stmt)
     }
@@ -30,7 +33,7 @@ impl FileFeature {
     pub fn fetch_between(
         from_commit: Commit,
         to_commit: Commit,
-        db: &Db,
+        conn: &Connection,
     ) -> Result<Vec<Feature>, FownerError> {
         let sql = r#"
         SELECT f.*
@@ -42,7 +45,6 @@ impl FileFeature {
           AND c.project_id = ?3
         GROUP BY f.id;
           "#;
-        let conn = db.pool.get()?;
         let mut stmt = conn.prepare(sql)?;
         let rows = stmt.query_map(
             params![
@@ -61,12 +63,11 @@ impl FileFeature {
 }
 
 impl NewFileFeature {
-    pub fn save(&self, db: &Db) -> Result<FileFeature, FownerError> {
+    pub fn save(&self, conn: &Connection) -> Result<FileFeature, FownerError> {
         let sql = "INSERT OR IGNORE INTO file_features (file_id, feature_id, created_at, updated_at) VALUES (?1, ?2, strftime('%s','now'), strftime('%s','now'))";
-        let conn = db.pool.get()?;
         let mut stmt = conn.prepare(sql)?;
         let _res = stmt.execute(params![self.file_id, self.feature_id,])?;
-        FileFeature::load(self.file_id, self.feature_id, db)
+        FileFeature::load(self.file_id, self.feature_id, conn)
     }
 }
 

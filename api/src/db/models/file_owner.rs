@@ -1,6 +1,6 @@
 use crate::db::models::extract_all;
+use crate::db::Connection;
 use crate::errors::FownerError;
-use crate::Db;
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
@@ -27,9 +27,8 @@ impl FileOwner {
         file_id: u32,
         owner_id: Option<u32>,
         action_date: Option<NaiveDateTime>,
-        db: &Db,
+        conn: &Connection,
     ) -> Result<Vec<FileOwner>, FownerError> {
-        let conn = db.pool.get()?;
         let mut stmt = conn.prepare("SELECT file_id, owner_id, action_date, sha, created_at, updated_at FROM file_owners WHERE file_id = ?1 AND (?2 IS NULL OR owner_id = ?2) AND (?3 IS NULL or action_date = ?3) ORDER BY action_date DESC")?;
         extract_all!(
             params![file_id, owner_id, action_date.map(|d| d.timestamp())],
@@ -52,8 +51,7 @@ impl<'stmt> From<&Row<'stmt>> for FileOwner {
 }
 
 impl NewFileOwner {
-    pub fn save(&self, db: &Db) -> Result<FileOwner, FownerError> {
-        let conn = db.pool.get()?;
+    pub fn save(&self, conn: &Connection) -> Result<FileOwner, FownerError> {
         let mut stmt = conn.prepare("INSERT INTO file_owners (file_id, owner_id, action_date, sha, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, strftime('%s','now'), strftime('%s','now'))")?;
         let _res = stmt.execute(params![
             self.file_id,
@@ -65,7 +63,7 @@ impl NewFileOwner {
             self.file_id,
             Some(self.owner_id),
             Some(self.action_date),
-            db,
+            conn,
         )?;
         file_owner
             .first()
