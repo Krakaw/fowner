@@ -3,6 +3,7 @@ use crate::db::Connection;
 use crate::git::manager::GitManager;
 use crate::{Db, FownerError, Processor, Project};
 use actix_web::{web, Responder, Result};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::path::PathBuf;
@@ -33,6 +34,7 @@ pub async fn create(db: web::Data<Db>, json: web::Json<NewProject>) -> Result<im
 
     new_project.name = name;
     let project = new_project.save(&conn)?;
+    debug!("Project created: {}", project.id);
     Ok(web::Json(project))
 }
 
@@ -45,6 +47,10 @@ pub async fn fetch_remote_repo(
     let json = json.into_inner();
     let stop_at_sha = json.stop_at_sha;
     let skip_github_labels = json.skip_github_labels.unwrap_or_default();
+    debug!(
+        "Fetching pulls up until {:?} skipping github labels: {}",
+        stop_at_sha, skip_github_labels
+    );
     let db = db.get_ref();
     let mut db = db.pool.get().map_err(|e| FownerError::R2d2(e))?;
     let tx = db.transaction().map_err(|e| FownerError::Rusqlite(e))?;
@@ -52,19 +58,23 @@ pub async fn fetch_remote_repo(
     let project_id = project_id.into_inner();
     let project = Project::load(project_id, &conn)?;
     let absolute_path = project.get_absolute_dir(&storage_path.into_inner(), true)?;
+    debug!("Fetching git repo {:?}", absolute_path.to_str());
     let git_manager = GitManager::init(absolute_path, project.repo_url.clone())?;
     git_manager.fetch()?;
+    debug!("Fetched git repo");
     let processor = Processor {
         conn: &conn,
         git_manager,
         project,
     };
+    debug!("Processing commits");
     let commit_count = processor
         .fetch_commits_and_update_db(stop_at_sha, skip_github_labels)
         .await?;
     conn.transaction()?
         .commit()
         .map_err(|e| FownerError::Rusqlite(e))?;
+    debug!("{} commits processed", commit_count);
     Ok(web::Json(json!({ "commits": commit_count })))
 }
 
