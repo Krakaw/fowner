@@ -36,21 +36,21 @@ pub async fn fetch_remote_repo(
     db: web::Data<Db>,
     storage_path: web::Data<PathBuf>,
     project_id: web::Path<u32>,
-    json: Option<web::Json<FetchRequest>>,
+    json: web::Json<FetchRequest>,
 ) -> Result<impl Responder> {
-    let stop_at_sha = if let Some(json) = json {
-        let json = json.into_inner();
-        json.stop_at_sha
-    } else {
-        None
-    };
+    let json = json.into_inner();
+    let stop_at_sha = json.stop_at_sha;
 
     let project_id = project_id.into_inner();
     let project = Project::load(project_id, &db)?;
     let absolute_path = project.get_absolute_dir(&storage_path.into_inner(), true)?;
-    let git_manager = GitManager::init(absolute_path, project.repo_url)?;
+    let git_manager = GitManager::init(absolute_path, project.repo_url.clone())?;
     git_manager.fetch()?;
-    let processor = Processor::new(git_manager, &db)?;
+    let processor = Processor {
+        db: &db,
+        git_manager,
+        project,
+    };
     let commit_count = processor.fetch_commits_and_update_db(stop_at_sha).await?;
     Ok(web::Json(json!({ "commits": commit_count })))
 }

@@ -27,7 +27,7 @@ impl Db {
                     "#,
                 )
             });
-        let sqlite_pool = r2d2::Pool::new(sqlite_connection_manager)?;
+        let sqlite_pool = Pool::new(sqlite_connection_manager)?;
         let pool = Arc::new(sqlite_pool);
 
         // Performance tuning

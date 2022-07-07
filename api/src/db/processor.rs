@@ -129,7 +129,12 @@ impl<'a> Processor<'a> {
                     .save(self.db)?;
                 }
             }
-            debug!("Processed {} of {}", inc, number_of_commits);
+            debug!(
+                "Processed {} of {} - {}",
+                inc,
+                number_of_commits,
+                sha.chars().into_iter().take(7).collect::<String>()
+            );
             inc += 1;
         }
         Ok(number_of_commits)
