@@ -125,7 +125,7 @@ mod tests {
         let db = &handler.db;
         let conn = Connection::try_from(db).unwrap();
         let app = init(&db, &handler.tmp_dir).await;
-        let req = test::TestRequest::post().uri("/").set_json(&json!({"name": "TestProject", "repo_url": "https://github.com/Krakaw/empty.git", "path": "empty"})).to_request();
+        let req = test::TestRequest::post().uri("/").set_json(&json!({"name": "TestProject", "repo_url": "https://github.com/Krakaw/empty.git", "path": "empty", "github_labels_only": false })).to_request();
         let project: Project = test::call_and_read_body_json(&app, req).await;
         assert_eq!(project.id, 1);
         let db_project = Project::load(1, &conn).unwrap();

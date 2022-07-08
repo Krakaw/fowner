@@ -15,6 +15,7 @@ pub struct Project {
     pub name: Option<String>,
     pub repo_url: Option<String>,
     pub github_api_token: Option<String>,
+    pub github_labels_only: bool,
     pub path: String,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
@@ -25,6 +26,7 @@ pub struct NewProject {
     pub name: Option<String>,
     pub repo_url: Option<String>,
     pub github_api_token: Option<String>,
+    pub github_labels_only: bool,
     pub path: PathBuf,
 }
 
@@ -42,14 +44,15 @@ impl NewProject {
         }
         let mut stmt = conn.prepare(
             r#"
-        INSERT INTO projects (name, repo_url, github_api_token, path, created_at, updated_at)
-            VALUES (?, ?, ?, ?, strftime('%s', 'now'), strftime('%s', 'now'))
+        INSERT INTO projects (name, repo_url, github_api_token, github_labels_only, path, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'), strftime('%s', 'now'))
         "#,
         )?;
         let _res = stmt.execute(params![
             self.name,
             self.repo_url,
             self.github_api_token,
+            self.github_labels_only,
             self.path.to_string_lossy()
         ])?;
         let id = conn.last_insert_rowid();
@@ -62,7 +65,7 @@ impl Project {
         format!(
             r#"
             SELECT
-                id, name, repo_url, github_api_token, path, created_at, updated_at
+                id, name, repo_url, github_api_token, github_labels_only, path, created_at, updated_at
                 FROM projects
                 {}
                 {}
@@ -156,9 +159,10 @@ impl<'stmt> From<&Row<'stmt>> for Project {
             name: row.get(1).unwrap(),
             repo_url: row.get(2).unwrap(),
             github_api_token: row.get(3).unwrap(),
-            path: row.get(4).unwrap(),
-            created_at: NaiveDateTime::from_timestamp(row.get(5).unwrap(), 0),
-            updated_at: NaiveDateTime::from_timestamp(row.get(6).unwrap(), 0),
+            github_labels_only: row.get(4).unwrap(),
+            path: row.get(5).unwrap(),
+            created_at: NaiveDateTime::from_timestamp(row.get(6).unwrap(), 0),
+            updated_at: NaiveDateTime::from_timestamp(row.get(7).unwrap(), 0),
         }
     }
 }
@@ -170,6 +174,7 @@ impl From<&GitManager> for NewProject {
             repo_url: repo.url.clone(),
             path: repo.path.clone(),
             github_api_token: None,
+            github_labels_only: false,
         }
     }
 }
@@ -189,6 +194,7 @@ mod tests {
             repo_url: None,
             path,
             github_api_token: None,
+            github_labels_only: false,
         }
         .save(conn)
         .unwrap()
@@ -263,6 +269,7 @@ mod tests {
             repo_url: None,
             path: tmp_dir.to_path_buf(),
             github_api_token: Some("abc".to_string()),
+            github_labels_only: false,
         }
         .save(conn)
         .unwrap();
@@ -282,6 +289,7 @@ mod tests {
             repo_url: Some("https://github.com/Krakaw/fowner.git".to_string()),
             path: tmp_dir.to_path_buf(),
             github_api_token: Some("abc".to_string()),
+            github_labels_only: false,
         }
         .save(conn)
         .unwrap();
@@ -301,6 +309,7 @@ mod tests {
             repo_url: Some("https://github.com/Krakaw/fowner.git".to_string()),
             path: PathBuf::from("data/fowner".to_string()),
             github_api_token: Some("abc".to_string()),
+            github_labels_only: false,
         }
         .save(&conn)
         .unwrap();
@@ -327,6 +336,7 @@ mod tests {
             repo_url: Some("https://github.com/Krakaw/fowner.git".to_string()),
             path: handler.tmp_dir.clone(),
             github_api_token: Some("abc".to_string()),
+            github_labels_only: false,
         }
         .save(&conn)
         .unwrap();

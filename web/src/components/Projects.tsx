@@ -1,22 +1,16 @@
 import React from 'react';
-import {useQuery} from "react-query";
-import config from "../helpers/config";
+import {useRepositories} from "../hooks/queries.hooks";
 
 interface ProjectProps {
     onChange: (id: number) => void
 }
-function Projects(props: ProjectProps) {
+export const Projects = (props: ProjectProps) => {
 
-    const { isLoading, error, data } = useQuery('projectData', () =>
-        fetch(`${config.apiUrl}/projects`).then(res =>
-            res.json()
-        )
-    )
+    const { isLoading, error, data = [] } = useRepositories();
 
     if (isLoading) return <>Loading...</>
 
-    if (error ) return (<>An error has occurred: {error}</>);
-
+    if (error) return (<>An error has occurred</>);
     return (
         <select onChange={e => {props.onChange(parseInt(e.target.value))}}>
             <option value={""}>Select Project</option>

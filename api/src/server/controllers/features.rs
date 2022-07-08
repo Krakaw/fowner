@@ -17,6 +17,11 @@ pub async fn get_features_between_commits(
             "Commits are from different projects",
         ));
     }
+    let (from_commit, to_commit) = if from_commit.commit_time > to_commit.commit_time {
+        (to_commit, from_commit)
+    } else {
+        (from_commit, to_commit)
+    };
     let features = FileFeature::fetch_between(from_commit, to_commit, &conn)?;
     Ok(web::Json(features))
 }

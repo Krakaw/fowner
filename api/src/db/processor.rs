@@ -92,7 +92,7 @@ impl<'a> Processor<'a> {
                 }
             }
             // If there were not github tags, or no repo to pull from then use the git source commit messages
-            if source_feature_names.is_empty() {
+            if source_feature_names.is_empty() && !project.github_labels_only {
                 source_feature_names.append(&mut git_history.features.clone());
             }
             for feature in source_feature_names {

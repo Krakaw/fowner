@@ -103,8 +103,9 @@ pub fn migrations() -> Migrations<'static> {
                 name                TEXT NULL,
                 repo_url            TEXT NULL,
                 github_api_token    TEXT NULL,
-                created_at          INT  NOT NULL,
-                updated_at          INT  NOT NULL
+                github_labels_only  INT DEFAULT 0 NOT NULL,
+                created_at          INT NOT NULL,
+                updated_at          INT NOT NULL
             );
         "#,
         ),

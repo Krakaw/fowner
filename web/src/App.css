@@ -20,3 +20,13 @@
   color: #61dafb;
 }
 
+.Details {
+  display: flex;
+  flex-direction: row;
+  color: black;
+}
+
+.Details > div {
+  display: flex;
+  flex: 1;
+}
