@@ -70,11 +70,15 @@ impl GitManager {
     }
 
     pub fn fetch(&self) -> Result<(), FownerError> {
-        Command::new("git")
+        let result = Command::new("git")
             .current_dir(&self.path)
             .arg("fetch")
             .output()
             .map_err(|e| FownerError::GitError(format!("Fetch error {}", e)))?;
+        eprintln!("result = {:?}", String::from_utf8(result.stdout)?);
+        if !result.status.success() {
+            return Err(FownerError::Execution(String::from_utf8(result.stderr)?));
+        }
         Ok(())
     }
 

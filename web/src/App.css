@@ -33,5 +33,10 @@
 }
 
 .Details .Features {
-  max-width: 30%;
+  max-width: 25%;
+}
+
+ul.ProjectsSelect li {
+  cursor: pointer;
+  list-style-type: none;
 }

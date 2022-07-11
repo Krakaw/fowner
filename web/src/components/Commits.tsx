@@ -1,5 +1,6 @@
 import {useEffect, useState} from "react";
 import {useCommits} from "../hooks/queries.hooks";
+import "./Table.css";
 
 interface CommitsProps {
     projectId?: number,
@@ -27,21 +28,23 @@ function Commits(props: CommitsProps) {
 
 
     return (
-        <table>
+        <table className={"styled-table"}>
             <thead>
             <tr>
                 <th>&nbsp;</th>
-
                 <th>SHA</th>
                 <th>Description</th>
                 <th>Features</th>
+                <th>Author</th>
                 <th>Time</th>
             </tr>
             </thead>
             <tbody>
             {
-                data.map((r: any) => <tr key={r.sha}>
-                    <td><input type={"checkbox"}
+                data.map((r: any) =>
+                    <tr key={r.sha} className={(start.sha === r.sha || end.sha === r.sha) ? "active-row" : ""}>
+                    <td>
+                        <input type={"checkbox"}
                                disabled={!(start.sha === r.sha || end.sha === r.sha) && !!start.commit_time && !!end.commit_time}
                                checked={start.sha === r.sha || end.sha === r.sha}
                                onChange={(e) => {
@@ -68,6 +71,7 @@ function Commits(props: CommitsProps) {
                     <td>{r.sha.substring(0, 7)}</td>
                     <td>{r.description}</td>
                     <td>{r.feature_names.join(", ")}</td>
+                        <td>{}</td>
                     <td>{new Date(r.commit_time).toLocaleString()}</td>
                 </tr>)
             }
