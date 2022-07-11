@@ -53,7 +53,7 @@ pub async fn fetch_remote_repo(
     );
     let db = db.get_ref();
     let mut db = db.pool.get().map_err(FownerError::R2d2)?;
-    let tx = db.transaction().map_err(|e| FownerError::Rusqlite(e))?;
+    let tx = db.transaction().map_err(FownerError::Rusqlite)?;
     let conn = Connection::from(tx);
     let project_id = project_id.into_inner();
     let project = Project::load(project_id, &conn)?;

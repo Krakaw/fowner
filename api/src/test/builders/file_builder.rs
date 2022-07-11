@@ -3,11 +3,9 @@ use crate::db::models::feature::NewFeature;
 use crate::db::models::file::NewFile;
 use crate::db::models::file_commit::FileCommit;
 use crate::db::models::file_feature::NewFileFeature;
-use crate::db::models::project::NewProject;
-use crate::{Connection, File, FownerError, Project};
-use chrono::{NaiveDateTime, Utc};
+use crate::{Connection, File, FownerError};
+use chrono::Utc;
 use std::env::temp_dir;
-use std::path::{Path, PathBuf};
 
 #[allow(dead_code)]
 pub struct FileBuilder {
@@ -56,13 +54,13 @@ impl FileBuilder {
                 name: feature_name,
                 description: None,
             }
-            .save(&conn)
+            .save(conn)
             .unwrap();
             NewFileFeature {
                 file_id: file.id,
                 feature_id: feature.id,
             }
-            .save(&conn)
+            .save(conn)
             .unwrap();
         }
 
@@ -75,14 +73,14 @@ impl FileBuilder {
                 description: commit_sha.clone(),
                 commit_time: Utc::now().naive_utc(),
             }
-            .save(&conn)
+            .save(conn)
             .unwrap();
             last_sha = Some(vec![commit_sha]);
             FileCommit {
                 file_id: file.id,
                 commit_id: commit.id,
             }
-            .save(&conn)
+            .save(conn)
             .unwrap();
         }
         Ok(file)
