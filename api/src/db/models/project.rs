@@ -104,8 +104,22 @@ impl Project {
                     repo_url
                 )));
             }
-            let mut parts: Vec<&str> = repo_url.rsplit('/').collect();
-            let repo_owner: Vec<&str> = parts.drain(..2).collect();
+            let repo_owner = if repo_url.to_lowercase().starts_with("https://") {
+                let mut parts: Vec<&str> = repo_url.rsplit('/').collect();
+                let repo_owner: Vec<&str> = parts.drain(..2).collect();
+
+                repo_owner
+            } else {
+                let path: Vec<&str> = repo_url.rsplit(':').collect();
+                let repo_owner: Vec<&str> = path
+                    .get(0)
+                    .ok_or_else(|| {
+                        FownerError::GitError("Invalid SSH Github url in repo_url".to_string())
+                    })?
+                    .rsplit('/')
+                    .collect();
+                repo_owner
+            };
             let repo = repo_owner
                 .get(0)
                 .map(|r| r.replace(".git", ""))
@@ -287,7 +301,7 @@ mod tests {
         let project = NewProject {
             name: Some("Project 1".to_string()),
             repo_url: Some("https://github.com/Krakaw/fowner.git".to_string()),
-            path: tmp_dir.to_path_buf(),
+            path: tmp_dir.join("p1"),
             github_api_token: Some("abc".to_string()),
             github_labels_only: false,
         }
@@ -295,6 +309,34 @@ mod tests {
         .unwrap();
         let gh_api_url = project.get_github_api_url().unwrap();
         assert_eq!(gh_api_url, "https://api.github.com/repos/Krakaw/fowner");
+
+        let project2 = NewProject {
+            name: Some("Project 2".to_string()),
+            repo_url: Some("git@github.com:Krakaw/fowner.git".to_string()),
+            path: tmp_dir.join("p2"),
+            github_api_token: Some("abc".to_string()),
+            github_labels_only: false,
+        }
+        .save(conn)
+        .unwrap();
+        let gh_api_url = project2.get_github_api_url().unwrap();
+        assert_eq!(gh_api_url, "https://api.github.com/repos/Krakaw/fowner");
+
+        let project3 = NewProject {
+            name: Some("Project 3".to_string()),
+            repo_url: Some("git@github.com:tari-labs/emoji.id-frontend.git".to_string()),
+            path: tmp_dir.join("p3"),
+            github_api_token: Some("abc".to_string()),
+            github_labels_only: false,
+        }
+        .save(conn)
+        .unwrap();
+        eprintln!("project3 = {:?}", project3);
+        let gh_api_url = project3.get_github_api_url().unwrap();
+        assert_eq!(
+            gh_api_url,
+            "https://api.github.com/repos/tari-labs/emoji.id-frontend"
+        );
     }
 
     #[test]

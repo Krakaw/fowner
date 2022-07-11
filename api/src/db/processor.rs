@@ -11,7 +11,7 @@ use crate::errors::FownerError;
 use crate::git::github::Github;
 use crate::git::manager::GitManager;
 use chrono::NaiveDateTime;
-use log::debug;
+use log::{debug, error};
 
 pub struct Processor<'a> {
     pub conn: &'a Connection<'a>,
@@ -86,8 +86,15 @@ impl<'a> Processor<'a> {
             // Use the github tags if they're available as the primary features
             if !skip_github_labels {
                 if let Some(github) = &github {
-                    if let Ok(mut labels) = github.fetch_labels_for_commit(sha.as_str()).await {
-                        source_feature_names.append(&mut labels);
+                    debug!("Fetching github labels");
+                    match github.fetch_labels_for_commit(sha.as_str()).await {
+                        Ok(mut labels) => {
+                            debug!("Found labels {:?}", labels);
+                            source_feature_names.append(&mut labels);
+                        }
+                        Err(e) => {
+                            error!("{:?}", e);
+                        }
                     }
                 }
             }
