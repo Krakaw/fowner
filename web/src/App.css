@@ -29,4 +29,9 @@
 .Details > div {
   display: flex;
   flex: 1;
+
+}
+
+.Details .Features {
+  max-width: 30%;
 }

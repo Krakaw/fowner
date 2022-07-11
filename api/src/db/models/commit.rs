@@ -14,6 +14,7 @@ pub struct Commit {
     pub parent_sha: Option<Vec<String>>,
     pub description: String,
     pub commit_time: NaiveDateTime,
+    pub feature_names: Vec<String>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -58,7 +59,33 @@ impl Commit {
         order_clause: Option<String>,
         paging_clause: Option<String>,
     ) -> String {
-        format!("SELECT id, project_id, sha, parent_sha, description, commit_time, created_at, updated_at FROM commits {} {} {}", where_clause, order_clause.unwrap_or_default(), paging_clause.unwrap_or_default())
+        format!(
+            r#"
+            SELECT c.id,
+                   c.project_id,
+                   c.sha,
+                   c.parent_sha,
+                   c.description,
+                   c.commit_time,
+                   (SELECT GROUP_CONCAT(f2.name, ',')
+                    FROM file_commits fc
+                        INNER JOIN file_features ff ON fc.file_id = ff.file_id
+                        INNER JOIN features f2 on ff.feature_id = f2.id
+                    WHERE fc.commit_id = c.id
+                    GROUP BY fc.file_id)                           AS feature_names,
+                   c.created_at,
+                   c.updated_at
+            FROM commits c
+            -- WHERE
+            {}
+            -- ORDER BY
+            {}
+            -- PAGING
+            {}"#,
+            where_clause,
+            order_clause.unwrap_or_default(),
+            paging_clause.unwrap_or_default()
+        )
     }
     pub fn load_by_sha(sha: String, conn: &Connection) -> Result<Self, FownerError> {
         let mut stmt = conn.prepare(&Commit::sql(
@@ -111,6 +138,10 @@ impl Commit {
 
 impl<'stmt> From<&Row<'stmt>> for Commit {
     fn from(row: &Row) -> Self {
+        let feature_names: Vec<String> = row
+            .get(6)
+            .map(|s: String| s.split(',').map(|s| s.to_string()).collect())
+            .unwrap_or_default();
         Self {
             id: row.get(0).unwrap(),
             project_id: row.get(1).unwrap(),
@@ -121,8 +152,9 @@ impl<'stmt> From<&Row<'stmt>> for Commit {
                 .unwrap_or_default(),
             description: row.get(4).unwrap(),
             commit_time: NaiveDateTime::from_timestamp(row.get(5).unwrap(), 0),
-            created_at: NaiveDateTime::from_timestamp(row.get(6).unwrap(), 0),
-            updated_at: NaiveDateTime::from_timestamp(row.get(7).unwrap(), 0),
+            feature_names,
+            created_at: NaiveDateTime::from_timestamp(row.get(7).unwrap(), 0),
+            updated_at: NaiveDateTime::from_timestamp(row.get(8).unwrap(), 0),
         }
     }
 }
@@ -130,7 +162,10 @@ impl<'stmt> From<&Row<'stmt>> for Commit {
 #[cfg(test)]
 mod test {
     use crate::db::models::commit::{Commit, NewCommit};
+    use crate::db::models::feature::NewFeature;
+    use crate::db::models::file_commit::FileCommit;
     use crate::server::paging::SortDir;
+    use crate::test::builders::file_builder::FileBuilder;
     use crate::test::builders::project_builder::ProjectBuilder;
     use crate::test::tests::TestHandler;
     use crate::Connection;
@@ -232,7 +267,16 @@ mod test {
         let conn = Connection::try_from(db).unwrap();
         let tmp_dir = &handler.tmp_dir;
         let project = ProjectBuilder::with_path(tmp_dir).build(&conn).unwrap();
-        let commit_1 = NewCommit {
+
+        let file_1 = FileBuilder {
+            project_id: project.id,
+            ..FileBuilder::default()
+        }
+        .with_features(vec!["Feature 1".to_string(), "Feature 2".to_string()])
+        .build(&conn)
+        .unwrap();
+
+        let mut commit_1 = NewCommit {
             project_id: project.id,
             sha: "deadbeef".to_string(),
             parent_sha: None,
@@ -241,6 +285,13 @@ mod test {
         }
         .save(&conn)
         .unwrap();
+        FileCommit {
+            file_id: file_1.id,
+            commit_id: commit_1.id,
+        }
+        .save(&conn)
+        .unwrap();
+        commit_1.feature_names = vec!["Feature 1".to_string(), "Feature 2".to_string()];
         let commit_2 = NewCommit {
             project_id: project.id,
             sha: "abcdfe123".to_string(),

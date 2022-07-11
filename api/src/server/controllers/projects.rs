@@ -52,7 +52,7 @@ pub async fn fetch_remote_repo(
         stop_at_sha, skip_github_labels
     );
     let db = db.get_ref();
-    let mut db = db.pool.get().map_err(|e| FownerError::R2d2(e))?;
+    let mut db = db.pool.get().map_err(FownerError::R2d2)?;
     let tx = db.transaction().map_err(|e| FownerError::Rusqlite(e))?;
     let conn = Connection::from(tx);
     let project_id = project_id.into_inner();
@@ -73,7 +73,7 @@ pub async fn fetch_remote_repo(
         .await?;
     conn.transaction()?
         .commit()
-        .map_err(|e| FownerError::Rusqlite(e))?;
+        .map_err(FownerError::Rusqlite)?;
     debug!("{} commits processed", commit_count);
     Ok(web::Json(json!({ "commits": commit_count })))
 }

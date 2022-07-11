@@ -5,7 +5,7 @@ import {useCommits} from "../hooks/queries.hooks";
 
 interface CommitsProps {
     projectId?: number,
-    onCommitSelected: (key:string, commit: any) => void
+    onCommitSelected: (key: string, commit: any) => void
 }
 
 function Commits(props: CommitsProps) {
@@ -31,11 +31,12 @@ function Commits(props: CommitsProps) {
         <table>
             <thead>
             <tr>
-            <th>&nbsp;</th>
+                <th>&nbsp;</th>
 
-            <th>SHA</th>
-            <th>Description</th>
-            <th>Time</th>
+                <th>SHA</th>
+                <th>Description</th>
+                <th>Features</th>
+                <th>Time</th>
             </tr>
             </thead>
             <tbody>
@@ -67,6 +68,7 @@ function Commits(props: CommitsProps) {
                                }}/></td>
                     <td>{r.sha.substring(0, 7)}</td>
                     <td>{r.description}</td>
+                    <td>{r.feature_names.join(", ")}</td>
                     <td>{new Date(r.commit_time).toLocaleString()}</td>
                 </tr>)
             }
@@ -74,12 +76,12 @@ function Commits(props: CommitsProps) {
             </tbody>
             <tfoot>
             <tr>
-            <td>
-                <button disabled={page === 0} onClick={() => setPage(Math.max(page - 1, 0))}>Prev</button>
-            </td>
-            <td>
-                <button onClick={() => setPage(page + 1)}>Next</button>
-            </td>
+                <td>
+                    <button disabled={page === 0} onClick={() => setPage(Math.max(page - 1, 0))}>Prev</button>
+                </td>
+                <td>
+                    <button onClick={() => setPage(page + 1)}>Next</button>
+                </td>
             </tr>
             </tfoot>
         </table>

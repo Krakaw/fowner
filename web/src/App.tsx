@@ -48,7 +48,7 @@ function App() {
                     <div>
                         {projectId && <Commits projectId={projectId} onCommitSelected={(k, c) => onCommitSelected(k,c)}/>}
                     </div>
-                    <div style={{border: '1px solid red'}}>
+                    <div className={"Features"} style={{border: '1px solid red'}}>
                         {(projectId && start?.sha && end?.sha) && <Features start={start.sha} end={end.sha}></Features>}</div>
                 </div>
 
