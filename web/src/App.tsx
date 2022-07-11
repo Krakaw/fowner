@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import './App.css';
 import Projects from "./components/Projects";
-import {QueryClient, QueryClientProvider, useQuery} from 'react-query'
+import {QueryClient, QueryClientProvider} from 'react-query'
 import Commits from "./components/Commits";
 import axios from "axios";
 import config from "./helpers/config";
@@ -16,7 +16,7 @@ function App() {
     const [commits, setCommits] = useState<Record<string, any>>({});
     const fetchRepo = useCallback(() => {
         axios.post(`${config.apiUrl}/projects/${projectId}/fetch`);
-    }, [[projectId]])
+    }, [projectId])
     const onCommitSelected = (key: string, commit:any) => {
         if (key === 'start') {
             setStart(commit);
@@ -48,7 +48,7 @@ function App() {
                     <div>
                         {projectId && <Commits projectId={projectId} onCommitSelected={(k, c) => onCommitSelected(k,c)}/>}
                     </div>
-                    <div className={"Features"} style={{border: '1px solid red'}}>
+                    <div className={"Features"}>
                         {(projectId && start?.sha && end?.sha) && <Features start={start.sha} end={end.sha}></Features>}</div>
                 </div>
 

@@ -1,5 +1,3 @@
-import {useQuery} from "react-query";
-import config from "../helpers/config";
 import {useEffect, useState} from "react";
 import {useCommits} from "../hooks/queries.hooks";
 
@@ -14,7 +12,8 @@ function Commits(props: CommitsProps) {
     const [start, setStart] = useState(initialState);
     const [end, setEnd] = useState(initialState);
     const [page, setPage] = useState(0);
-    const [limit, setLimit] = useState(100);
+    // eslint-disable-next-line
+    const [limit, _setLimit] = useState(100);
     const {isLoading, error, data = [], refetch} = useCommits(props.projectId || 0, page, limit)
 
     useEffect(() => {
