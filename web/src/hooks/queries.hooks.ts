@@ -13,10 +13,15 @@ export const useCommits = (projectId: number, page: number = 0, limit: number = 
     )
 )
 
-export const useFeatures = (start: string, end: string) => useQuery(['features', start, end], () =>
-    fetch(`${config.apiUrl}/features/${start}/${end}`).then(res =>
-        res.json()
-    )
+export const useFeatures = (start?: string, end?: string) => useQuery(['features', start, end], () => {
+        if (!start || !end) {
+            throw Error("Start and End are both required");
+        }
+        return fetch(`${config.apiUrl}/features/${start}/${end}`).then(res =>
+            res.json()
+        )
+}
+
 )
 
 

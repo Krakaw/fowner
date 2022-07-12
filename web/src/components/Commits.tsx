@@ -1,93 +1,103 @@
-import {useEffect, useState} from "react";
+import React, {useEffect, useState} from "react";
 import {useCommits} from "../hooks/queries.hooks";
 import "./Table.css";
+import {useParams, useSearchParams} from "react-router-dom";
+import Features from "./Features";
 
-interface CommitsProps {
-    projectId?: number,
-    onCommitSelected: (key: string, commit: any) => void
-}
 
-function Commits(props: CommitsProps) {
-
-    let initialState = {sha: null, commit_time: null};
-    const [start, setStart] = useState(initialState);
-    const [end, setEnd] = useState(initialState);
+function Commits() {
+    const {projectId} = useParams();
+    let [searchParams, setSearchParams] = useSearchParams();
+    const start = searchParams.get("start") || '';
+    const end = searchParams.get("end") || '';
     const [page, setPage] = useState(0);
     // eslint-disable-next-line
     const [limit, _setLimit] = useState(100);
-    const {isLoading, error, data = [], refetch} = useCommits(props.projectId || 0, page, limit)
+    const {isLoading, error, data = [], refetch} = useCommits(projectId ? parseInt(projectId) : 0, page, limit)
 
     useEffect(() => {
         refetch()
     }, [page, limit, refetch]);
+
+
     if (error) return <>Error</>;
 
     if (isLoading) {
         return <>Loading ...</>
     }
-
-
     return (
-        <table className={"styled-table"}>
-            <thead>
-            <tr>
-                <th>&nbsp;</th>
-                <th>SHA</th>
-                <th>Description</th>
-                <th>Features</th>
-                <th>Author</th>
-                <th>Time</th>
-            </tr>
-            </thead>
-            <tbody>
-            {
-                data.map((r: any) =>
-                    <tr key={r.sha} className={(start.sha === r.sha || end.sha === r.sha) ? "active-row" : ""}>
-                    <td>
-                        <input type={"checkbox"}
-                               disabled={!(start.sha === r.sha || end.sha === r.sha) && !!start.commit_time && !!end.commit_time}
-                               checked={start.sha === r.sha || end.sha === r.sha}
-                               onChange={(e) => {
-                                   const checked = e.target.checked;
+        <div>
+            <div className={"Commits"}>
+                <table className={"styled-table"}>
+                    <thead>
+                    <tr>
+                        <th>&nbsp;</th>
+                        <th>SHA</th>
+                        <th>Description</th>
+                        <th>Features</th>
+                        <th>Author</th>
+                        <th>Time</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {
+                        data.map((r: any) =>
+                            <tr key={r.sha} className={(start === r.sha || end === r.sha) ? "active-row" : ""}>
+                                <td>
+                                    <input type={"checkbox"}
+                                           checked={start === r.sha || end === r.sha}
+                                           onChange={(e) => {
+                                               const checked = e.target.checked;
+                                               if (checked) {
+                                                   if (!start) {
+                                                       setSearchParams({
+                                                           start: r.sha,
+                                                           end: searchParams.get("end") || ''
+                                                       })
+                                                   } else {
+                                                       setSearchParams({
+                                                           end: r.sha,
+                                                           start: searchParams.get("start") || ''
+                                                       })
+                                                   }
+                                               } else {
+                                                   if (start === r.sha) {
+                                                       setSearchParams({start: '', end: searchParams.get("end") || ''})
+                                                   } else if (end === r.sha) {
+                                                       setSearchParams({
+                                                           end: '',
+                                                           start: searchParams.get("start") || ''
+                                                       })
+                                                   }
+                                               }
 
-                                   if (checked) {
-                                       if (!start.commit_time) {
-                                           setStart(r);
-                                           props.onCommitSelected('start', r);
-                                       } else {
-                                           setEnd(r);
-                                           props.onCommitSelected('end', r);
-                                       }
+                                           }}/></td>
+                                <td>{r.sha.substring(0, 7)}</td>
+                                <td>{r.description}</td>
+                                <td>{r.feature_names.join(", ")}</td>
+                                <td>{}</td>
+                                <td>{new Date(r.commit_time).toLocaleString()}</td>
+                            </tr>)
+                    }
 
-                                   } else {
-                                       if (start.sha === r.sha) {
-                                           setStart(initialState)
-                                       } else if (end.sha === r.sha) {
-                                           setEnd(initialState)
-                                       }
-                                   }
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td>
+                            <button disabled={page === 0} onClick={() => setPage(Math.max(page - 1, 0))}>Prev</button>
+                        </td>
+                        <td>
+                            <button onClick={() => setPage(page + 1)}>Next</button>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
 
-                               }}/></td>
-                    <td>{r.sha.substring(0, 7)}</td>
-                    <td>{r.description}</td>
-                    <td>{r.feature_names.join(", ")}</td>
-                        <td>{}</td>
-                    <td>{new Date(r.commit_time).toLocaleString()}</td>
-                </tr>)
-            }
-
-            </tbody>
-            <tfoot>
-            <tr>
-                <td>
-                    <button disabled={page === 0} onClick={() => setPage(Math.max(page - 1, 0))}>Prev</button>
-                </td>
-                <td>
-                    <button onClick={() => setPage(page + 1)}>Next</button>
-                </td>
-            </tr>
-            </tfoot>
-        </table>
+            </div>
+            <div className={"Features"}>
+                <Features start={start} end={end}/>
+            </div>
+        </div>
     )
 }
 

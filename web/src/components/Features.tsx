@@ -2,14 +2,14 @@ import {useFeatures} from "../hooks/queries.hooks";
 import "./Table.css";
 
 interface FeatureProps {
-    start: any,
-    end: any
+    start?: string,
+    end?: string
 }
 
-function Features(props: FeatureProps) {
+function Features({start, end}: FeatureProps) {
 
-    const {isLoading, data = []} = useFeatures(props.start, props.end);
-    if (isLoading) return <>Loading...</>
+    const {isLoading, error, data = []} = useFeatures(start, end);
+
     return (
         <div>
             <table className={"styled-table"}>
@@ -19,6 +19,9 @@ function Features(props: FeatureProps) {
                 </tr>
                 </thead>
                 <tbody>
+                {error && <tr className={"error"}><td>Start and End required</td></tr>}
+                {isLoading && <tr className={"loading"}><td>Loading...</td></tr>}
+
                 {data.map((r: any) => <tr key={r.id}>
                     <td>{r.name}</td>
                 </tr>)}
