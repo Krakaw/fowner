@@ -94,6 +94,15 @@ pub async fn load(db: web::Data<Db>, path: web::Path<u32>) -> Result<impl Respon
     Ok(web::Json(json!(display_project)))
 }
 
+pub async fn destroy(db: web::Data<Db>, path: web::Path<u32>) -> Result<impl Responder> {
+    let project_id = path.into_inner();
+    let db = db.get_ref();
+    let conn = Connection::try_from(db)?;
+    let project = Project::load(project_id, &conn)?;
+    let result = project.destroy(&conn)?;
+    Ok(web::Json(json!(result)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

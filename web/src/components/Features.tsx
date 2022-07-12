@@ -8,8 +8,7 @@ interface FeatureProps {
 
 function Features({start, end}: FeatureProps) {
 
-    const {isLoading, error, data = []} = useFeatures(start, end);
-
+    const {isLoading = false, error = false, data = []} = useFeatures(start, end);
     return (
         <div>
             <table className={"styled-table"}>
@@ -21,7 +20,7 @@ function Features({start, end}: FeatureProps) {
                 <tbody>
                 {error && <tr className={"error"}><td>Start and End required</td></tr>}
                 {isLoading && <tr className={"loading"}><td>Loading...</td></tr>}
-
+                {!isLoading && !error && data.length === 0 && <tr className={"loading"}><td>No Features</td></tr>}
                 {data.map((r: any) => <tr key={r.id}>
                     <td>{r.name}</td>
                 </tr>)}

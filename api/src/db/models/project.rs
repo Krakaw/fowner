@@ -164,6 +164,12 @@ impl Project {
             files,
         })
     }
+
+    pub fn destroy(self, conn: &Connection) -> Result<usize, FownerError> {
+        let mut stmt = conn.prepare("DELETE FROM projects WHERE id = ?")?;
+        let result = stmt.execute(params![self.id])?;
+        Ok(result)
+    }
 }
 
 impl<'stmt> From<&Row<'stmt>> for Project {

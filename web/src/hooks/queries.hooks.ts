@@ -15,13 +15,7 @@ export const useCommits = (projectId: number, page: number = 0, limit: number = 
 
 export const useFeatures = (start?: string, end?: string) => useQuery(['features', start, end], () => {
         if (!start || !end) {
-            console.log('asdfasdf')
-            return Promise.resolve({
-                error: 'Waiting for shas',
-                data: [],
-                status: 'error',
-                isLoading: false
-            });
+             throw Error('Waiting for shas');
         }
         return fetch(`${config.apiUrl}/features/${start}/${end}`).then(res =>
             res.json()

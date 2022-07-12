@@ -59,6 +59,7 @@ impl Api {
                         .service(
                             web::scope("/{project_id}")
                                 .route("", web::get().to(projects::load))
+                                .route("", web::delete().to(projects::destroy))
                                 .service(
                                     web::scope("/fetch")
                                         .route("", web::post().to(projects::fetch_remote_repo)),

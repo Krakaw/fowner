@@ -20,11 +20,12 @@ impl Db {
             SqliteConnectionManager::file(connection_string).with_init(|c| {
                 c.execute_batch(
                     r#"
-                    pragma journal_mode = WAL;
-                    pragma synchronous = normal;
-                    pragma temp_store = memory;
-                    pragma mmap_size = 30000000000;
-                    pragma page_size = 32768;
+                    PRAGMA journal_mode = WAL;
+                    PRAGMA synchronous = normal;
+                    PRAGMA temp_store = memory;
+                    PRAGMA mmap_size = 30000000000;
+                    PRAGMA page_size = 32768;
+                    PRAGMA foreign_keys = ON
                     "#,
                 )
             });

@@ -13,7 +13,11 @@ pub fn migrations() -> Migrations<'static> {
                 description TEXT NULL,
                 commit_time INT  NOT NULL,
                 created_at  INT  NOT NULL,
-                updated_at  INT  NOT NULL
+                updated_at  INT  NOT NULL,
+                CONSTRAINT fk_projects
+                    FOREIGN KEY (project_id)
+                    REFERENCES projects(id)
+                    ON DELETE CASCADE
             );
         "#,
         ),
@@ -31,7 +35,11 @@ pub fn migrations() -> Migrations<'static> {
                 name        TEXT NOT NULL,
                 description TEXT NULL,
                 created_at  INT  NOT NULL,
-                updated_at  INT  NOT NULL
+                updated_at  INT  NOT NULL,
+                CONSTRAINT fk_projects
+                    FOREIGN KEY (project_id)
+                    REFERENCES projects(id)
+                    ON DELETE CASCADE
             );
         "#,
         ),
@@ -43,7 +51,11 @@ pub fn migrations() -> Migrations<'static> {
                 project_id INTEGER NOT NULL,
                 path       TEXT NOT NULL,
                 created_at INT  NOT NULL,
-                updated_at INT  NOT NULL
+                updated_at INT  NOT NULL,
+                CONSTRAINT fk_projects
+                    FOREIGN KEY (project_id)
+                    REFERENCES projects(id)
+                    ON DELETE CASCADE
             );
         "#,
         ),
@@ -61,7 +73,11 @@ pub fn migrations() -> Migrations<'static> {
                 action_date INT NOT NULL,
                 sha         TEXT NOT NULL,
                 created_at  INT NOT NULL,
-                updated_at  INT NOT NULL
+                updated_at  INT NOT NULL,
+                CONSTRAINT fk_files
+                    FOREIGN KEY (file_id)
+                    REFERENCES files(id)
+                    ON DELETE CASCADE
             );
         "#,
         ),
@@ -72,7 +88,11 @@ pub fn migrations() -> Migrations<'static> {
                 file_id     INTEGER ,
                 feature_id  INTEGER ,
                 created_at  INT NOT NULL,
-                updated_at  INT NOT NULL
+                updated_at  INT NOT NULL,
+                CONSTRAINT fk_files
+                    FOREIGN KEY (file_id)
+                    REFERENCES files(id)
+                    ON DELETE CASCADE
             );
         "#,
         ),
@@ -114,7 +134,12 @@ pub fn migrations() -> Migrations<'static> {
             CREATE TABLE IF NOT EXISTS file_commits
             (
                 file_id     INTEGER,
-                commit_id   INTEGER
+                commit_id   INTEGER,
+                CONSTRAINT fk_files
+                    FOREIGN KEY (file_id)
+                    REFERENCES files(id)
+                    ON DELETE CASCADE
+
             );
         "#,
         ),
