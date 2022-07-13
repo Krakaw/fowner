@@ -4,9 +4,8 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import ReactDOM from "react-dom/client";
 import {
-    BrowserRouter,
     Routes,
-    Route,
+    Route, HashRouter,
 } from "react-router-dom";
 import Commits from "./components/Commits";
 
@@ -15,14 +14,14 @@ const root = ReactDOM.createRoot(
 );
 root.render(
     <React.StrictMode>
-        <BrowserRouter>
+        <HashRouter>
             <Routes>
                 <Route path={"/"} element={<App/>}>
                     <Route path={"/projects/:projectId"} element={<Commits/>}>
                     </Route>
                 </Route>
             </Routes>
-        </BrowserRouter>
+        </HashRouter>
 
     </React.StrictMode>
 );
