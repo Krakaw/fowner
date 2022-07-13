@@ -65,8 +65,10 @@ impl FileBuilder {
         }
 
         let mut last_sha = None;
+
         for commit_sha in self.commits {
             let commit = NewCommit {
+                owner_id: 0,
                 project_id: self.project_id,
                 sha: commit_sha.clone(),
                 parent_sha: last_sha.clone(),

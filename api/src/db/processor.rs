@@ -73,6 +73,7 @@ impl<'a> Processor<'a> {
                 break;
             }
             let commit = NewCommit {
+                owner_id: owner.id,
                 project_id,
                 sha: sha.clone(),
                 parent_sha: git_history.parent_sha.clone(),

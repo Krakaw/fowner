@@ -7,6 +7,7 @@ pub fn migrations() -> Migrations<'static> {
             CREATE TABLE IF NOT EXISTS commits
             (
                 id          INTEGER  PRIMARY KEY AUTOINCREMENT,
+                owner_id    INTEGER NOT NULL,
                 project_id  INTEGER NOT NULL,
                 sha         TEXT NOT NULL,
                 parent_sha  TEXT NULL,

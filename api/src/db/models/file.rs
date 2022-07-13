@@ -266,7 +266,16 @@ mod test {
         let conn = &Connection::try_from(db).unwrap();
         let tmp_dir = &handler.tmp_dir;
         let project = ProjectBuilder::with_path(tmp_dir).build(conn).unwrap();
+        let owner = NewOwner {
+            handle: "Krakaw".to_string(),
+            name: None,
+            primary_owner_id: None,
+        }
+        .save(&conn)
+        .unwrap();
+        let owner_id = owner.id;
         let commit_1 = NewCommit {
+            owner_id,
             project_id: project.id,
             sha: "deadbeef".to_string(),
             parent_sha: None,
@@ -327,6 +336,7 @@ mod test {
         assert_eq!(db_file.owners, vec!["Krakaw".to_string()]);
 
         let commit_2 = NewCommit {
+            owner_id,
             project_id: project.id,
             sha: "beefdead".to_string(),
             parent_sha: Some(vec!["deadbeef".to_string()]),

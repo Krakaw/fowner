@@ -75,7 +75,7 @@ function Commits() {
                                 <td>{r.sha.substring(0, 7)}</td>
                                 <td>{r.description}</td>
                                 <td>{r.feature_names.join(", ")}</td>
-                                <td>{}</td>
+                                <td>{r.owner_handle}</td>
                                 <td>{new Date(r.commit_time).toLocaleString()}</td>
                             </tr>)
                     }

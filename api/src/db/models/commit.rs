@@ -10,6 +10,8 @@ use serde::{Deserialize, Serialize};
 pub struct Commit {
     pub id: u32,
     pub project_id: u32,
+    pub owner_id: u32,
+    pub owner_handle: String,
     pub sha: String,
     pub parent_sha: Option<Vec<String>>,
     pub description: String,
@@ -21,6 +23,7 @@ pub struct Commit {
 
 #[derive(Debug)]
 pub struct NewCommit {
+    pub owner_id: u32,
     pub project_id: u32,
     pub sha: String,
     pub parent_sha: Option<Vec<String>>,
@@ -30,8 +33,9 @@ pub struct NewCommit {
 
 impl NewCommit {
     pub fn save(&self, conn: &Connection) -> Result<Commit, FownerError> {
-        let mut stmt = conn.prepare("INSERT INTO commits (project_id, sha, parent_sha, description, commit_time, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, strftime('%s','now'), strftime('%s','now'))")?;
+        let mut stmt = conn.prepare("INSERT INTO commits (owner_id, project_id, sha, parent_sha, description, commit_time, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, strftime('%s','now'), strftime('%s','now'))")?;
         let _res = stmt.execute(params![
+            self.owner_id,
             self.project_id,
             self.sha,
             self.parent_sha.clone().map(|s| s.join(",")),
@@ -62,6 +66,8 @@ impl Commit {
         format!(
             r#"
             SELECT c.id,
+                   c.owner_id,
+                   coalesce(po.handle, o.handle) AS owner_handle,
                    c.project_id,
                    c.sha,
                    c.parent_sha,
@@ -73,9 +79,12 @@ impl Commit {
                         INNER JOIN features f2 on ff.feature_id = f2.id
                     WHERE fc.commit_id = c.id
                     GROUP BY fc.file_id)                           AS feature_names,
+
                    c.created_at,
                    c.updated_at
             FROM commits c
+            LEFT JOIN owners o ON c.owner_id = o.id
+            LEFT JOIN owners po ON po.id = o.primary_owner_id
             -- WHERE
             {}
             -- ORDER BY
@@ -89,7 +98,7 @@ impl Commit {
     }
     pub fn load_by_sha(sha: String, conn: &Connection) -> Result<Self, FownerError> {
         let mut stmt = conn.prepare(&Commit::sql(
-            "WHERE sha LIKE ?1 ORDER BY commit_time ASC;".to_string(),
+            "WHERE c.sha LIKE ?1 ORDER BY c.commit_time ASC;".to_string(),
             None,
             None,
         ))?;
@@ -97,7 +106,7 @@ impl Commit {
     }
 
     pub fn load(id: i64, conn: &Connection) -> Result<Self, FownerError> {
-        let mut stmt = conn.prepare(&Commit::sql("WHERE id = ?1;".to_string(), None, None))?;
+        let mut stmt = conn.prepare(&Commit::sql("WHERE c.id = ?1;".to_string(), None, None))?;
         extract_first!(params![id], stmt)
     }
     pub fn fetch_latest_for_project(
@@ -105,8 +114,8 @@ impl Commit {
         conn: &Connection,
     ) -> Result<Self, FownerError> {
         let mut stmt = conn.prepare(&Commit::sql(
-            "WHERE project_id = ?1".to_string(),
-            Some("ORDER BY commit_time DESC LIMIT 1".to_string()),
+            "WHERE c.project_id = ?1".to_string(),
+            Some("ORDER BY c.commit_time DESC LIMIT 1".to_string()),
             None,
         ))?;
         extract_first!(params![project_id], stmt)
@@ -122,7 +131,7 @@ impl Commit {
     ) -> Result<Vec<Self>, FownerError> {
         let sort_field = Self::sort_by_field(sort);
         let mut stmt = conn.prepare(&Commit::sql(
-            "WHERE project_id = ?1 AND (?2 IS NULL OR sha LIKE ?2)".to_string(),
+            "WHERE c.project_id = ?1 AND (?2 IS NULL OR c.sha LIKE ?2)".to_string(),
             Some(format!(
                 "ORDER BY {} {}",
                 sort_field,
@@ -139,22 +148,24 @@ impl Commit {
 impl<'stmt> From<&Row<'stmt>> for Commit {
     fn from(row: &Row) -> Self {
         let feature_names: Vec<String> = row
-            .get(6)
+            .get(8)
             .map(|s: String| s.split(',').map(|s| s.to_string()).collect())
             .unwrap_or_default();
         Self {
             id: row.get(0).unwrap(),
-            project_id: row.get(1).unwrap(),
-            sha: row.get(2).unwrap(),
+            owner_id: row.get(1).unwrap(),
+            owner_handle: row.get(2).unwrap(),
+            project_id: row.get(3).unwrap(),
+            sha: row.get(4).unwrap(),
             parent_sha: row
-                .get(3)
+                .get(5)
                 .map(|s: Option<String>| s.map(|s| s.split(',').map(String::from).collect()))
                 .unwrap_or_default(),
-            description: row.get(4).unwrap(),
-            commit_time: NaiveDateTime::from_timestamp(row.get(5).unwrap(), 0),
+            description: row.get(6).unwrap(),
+            commit_time: NaiveDateTime::from_timestamp(row.get(7).unwrap(), 0),
             feature_names,
-            created_at: NaiveDateTime::from_timestamp(row.get(7).unwrap(), 0),
-            updated_at: NaiveDateTime::from_timestamp(row.get(8).unwrap(), 0),
+            created_at: NaiveDateTime::from_timestamp(row.get(9).unwrap(), 0),
+            updated_at: NaiveDateTime::from_timestamp(row.get(10).unwrap(), 0),
         }
     }
 }
@@ -163,6 +174,7 @@ impl<'stmt> From<&Row<'stmt>> for Commit {
 mod test {
     use crate::db::models::commit::{Commit, NewCommit};
     use crate::db::models::file_commit::FileCommit;
+    use crate::db::models::owner::NewOwner;
     use crate::server::paging::SortDir;
     use crate::test::builders::file_builder::FileBuilder;
     use crate::test::builders::project_builder::ProjectBuilder;
@@ -177,8 +189,16 @@ mod test {
         let conn = Connection::try_from(db).unwrap();
         let tmp_dir = &handler.tmp_dir;
         let project = ProjectBuilder::with_path(tmp_dir).build(&conn).unwrap();
+        let owner = NewOwner {
+            handle: "Krakaw".to_string(),
+            name: None,
+            primary_owner_id: None,
+        }
+        .save(&conn)
+        .unwrap();
         let c1_commit_time = Utc::now().naive_utc();
         let commit_1 = NewCommit {
+            owner_id: owner.id,
             project_id: project.id,
             sha: "deadbeef".to_string(),
             parent_sha: None,
@@ -195,6 +215,7 @@ mod test {
         assert_eq!(commit_1.commit_time.timestamp(), c1_commit_time.timestamp());
 
         let commit_2 = NewCommit {
+            owner_id: owner.id,
             project_id: project.id,
             sha: "deadbeef2".to_string(),
             parent_sha: Some(vec!["deadbeef".to_string()]),
@@ -214,7 +235,16 @@ mod test {
         let conn = Connection::try_from(db).unwrap();
         let tmp_dir = &handler.tmp_dir;
         let project = ProjectBuilder::with_path(tmp_dir).build(&conn).unwrap();
+        let owner = NewOwner {
+            handle: "Krakaw".to_string(),
+            name: None,
+            primary_owner_id: None,
+        }
+        .save(&conn)
+        .unwrap();
+        let owner_id = owner.id;
         let commit_1 = NewCommit {
+            owner_id,
             project_id: project.id,
             sha: "deadbeef".to_string(),
             parent_sha: None,
@@ -224,6 +254,7 @@ mod test {
         .save(&conn)
         .unwrap();
         let commit_2 = NewCommit {
+            owner_id,
             project_id: project.id,
             sha: "deadbeef2".to_string(),
             parent_sha: Some(vec!["deadbeef".to_string()]),
@@ -233,6 +264,7 @@ mod test {
         .save(&conn)
         .unwrap();
         let commit_3 = NewCommit {
+            owner_id,
             project_id: project.id,
             sha: "deadbeef3".to_string(),
             parent_sha: Some(vec!["deadbeef2".to_string()]),
@@ -266,7 +298,14 @@ mod test {
         let conn = Connection::try_from(db).unwrap();
         let tmp_dir = &handler.tmp_dir;
         let project = ProjectBuilder::with_path(tmp_dir).build(&conn).unwrap();
-
+        let owner = NewOwner {
+            handle: "Krakaw".to_string(),
+            name: None,
+            primary_owner_id: None,
+        }
+        .save(&conn)
+        .unwrap();
+        let owner_id = owner.id;
         let file_1 = FileBuilder {
             project_id: project.id,
             ..FileBuilder::default()
@@ -276,6 +315,7 @@ mod test {
         .unwrap();
 
         let mut commit_1 = NewCommit {
+            owner_id,
             project_id: project.id,
             sha: "deadbeef".to_string(),
             parent_sha: None,
@@ -292,6 +332,7 @@ mod test {
         .unwrap();
         commit_1.feature_names = vec!["Feature 1".to_string(), "Feature 2".to_string()];
         let commit_2 = NewCommit {
+            owner_id,
             project_id: project.id,
             sha: "abcdfe123".to_string(),
             parent_sha: Some(vec!["deadbeef".to_string()]),
@@ -304,6 +345,7 @@ mod test {
         .save(&conn)
         .unwrap();
         let commit_3 = NewCommit {
+            owner_id,
             project_id: project.id,
             sha: "deadbeef3".to_string(),
             parent_sha: Some(vec!["deadbeef2".to_string(), "deadbeef".to_string()]),
