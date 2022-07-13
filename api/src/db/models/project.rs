@@ -38,10 +38,13 @@ pub struct DisplayProject {
 }
 
 impl NewProject {
-    pub fn save(&self, conn: &Connection) -> Result<Project, FownerError> {
+    pub fn save_or_load(&self, conn: &Connection) -> Result<Project, FownerError> {
         if let Ok(project) = Project::load_by_path(&self.path, conn) {
             return Ok(project);
         }
+        self.save(conn)
+    }
+    pub fn save(&self, conn: &Connection) -> Result<Project, FownerError> {
         let mut stmt = conn.prepare(
             r#"
         INSERT INTO projects (name, repo_url, github_api_token, github_labels_only, path, created_at, updated_at)
@@ -216,7 +219,7 @@ mod tests {
             github_api_token: None,
             github_labels_only: false,
         }
-        .save(conn)
+        .save_or_load(conn)
         .unwrap()
     }
 
@@ -230,6 +233,29 @@ mod tests {
         let project1 = add_project(conn, tmp_dir, "Project_1".to_string());
         let project2 = add_project(conn, tmp_dir, "Project_1".to_string());
         assert_eq!(project1, project2);
+        let db_projects = Project::load_by_path(tmp_dir.join("Project_1").as_path(), conn).unwrap();
+        assert_eq!(project1, db_projects);
+    }
+
+    #[test]
+    fn cannot_save_non_unique_projects() {
+        let handler = TestHandler::init();
+        let db = &handler.db;
+        let conn = &Connection::try_from(db).unwrap();
+
+        let tmp_dir = &handler.tmp_dir;
+        let project1 = add_project(conn, tmp_dir, "Project_1".to_string());
+        let path = tmp_dir.join("Project_1");
+        let err_result = NewProject {
+            name: Some("Project_1".to_string()),
+            repo_url: None,
+            path,
+            github_api_token: None,
+            github_labels_only: false,
+        }
+        .save(conn);
+        eprintln!("err_result = {:?}", err_result);
+        assert!(err_result.is_err());
         let db_projects = Project::load_by_path(tmp_dir.join("Project_1").as_path(), conn).unwrap();
         assert_eq!(project1, db_projects);
     }

@@ -21,7 +21,7 @@ pub struct Processor<'a> {
 
 impl<'a> Processor<'a> {
     pub fn new(git_manager: GitManager, conn: &'a Connection) -> Result<Self, FownerError> {
-        let project = NewProject::from(&git_manager).save(conn)?;
+        let project = NewProject::from(&git_manager).save_or_load(conn)?;
         Ok(Processor {
             conn,
             git_manager,
@@ -33,7 +33,7 @@ impl<'a> Processor<'a> {
         &self,
         stop_at_sha: Option<String>,
         skip_github_labels: bool,
-    ) -> Result<usize, FownerError> {
+    ) -> Result<(usize, usize), FownerError> {
         let number_of_commits = self
             .fetch_history_and_store_data(stop_at_sha, skip_github_labels)
             .await?;
@@ -44,7 +44,7 @@ impl<'a> Processor<'a> {
         &self,
         stop_at_sha: Option<String>,
         skip_github_labels: bool,
-    ) -> Result<usize, FownerError> {
+    ) -> Result<(usize, usize), FownerError> {
         let latest_commit = self.get_most_recent_commit();
         let history = self.git_manager.parse_history(latest_commit)?;
         let project = self.project.clone();
@@ -54,7 +54,7 @@ impl<'a> Processor<'a> {
         let stop_at_sha = stop_at_sha.unwrap_or_default();
         debug!("{} new commits to process", number_of_commits);
 
-        let mut inc = 1;
+        let mut commit_counter = 1;
         for git_history in history {
             // For each GitHistory
             // 1. We need to create an Owner from the handle
@@ -147,14 +147,14 @@ impl<'a> Processor<'a> {
             }
             debug!(
                 "Processed {} of {} - {}",
-                inc,
+                commit_counter,
                 number_of_commits,
                 sha.chars().into_iter().take(7).collect::<String>()
             );
-            inc += 1;
+            commit_counter += 1;
         }
         debug!("Finished processing project id: {}", project_id);
-        Ok(number_of_commits)
+        Ok((commit_counter - 1, number_of_commits))
     }
 
     fn get_most_recent_commit(&self) -> Option<NaiveDateTime> {

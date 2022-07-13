@@ -28,7 +28,7 @@ function Commits() {
     return (
         <div>
             <div className={"Commits"}>
-                <table className={"styled-table"}>
+                <table className={"styled-table sticky"}>
                     <thead>
                     <tr>
                         <th>&nbsp;</th>
@@ -92,10 +92,10 @@ function Commits() {
                     </tr>
                     </tfoot>
                 </table>
-
+                <Features start={start} end={end}/>
             </div>
             <div className={"Features"}>
-                <Features start={start} end={end}/>
+
             </div>
         </div>
     )

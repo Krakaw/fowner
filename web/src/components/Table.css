@@ -7,7 +7,7 @@
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
 }
 
-.styled-table thead {
+.styled-table.sticky thead {
     position: sticky;
     top: 0;
 }
@@ -23,12 +23,21 @@
     padding: 12px 15px;
 }
 
+.no-height-fill.styled-table td {
+    padding: 5px;
+}
+
+.no-height-fill.styled-table td, .no-height-fill.styled-table tr {
+    display: block;
+}
+
 .styled-table td:first-of-type {
     padding: 3px;
 }
 
 .styled-table tbody tr {
     border-bottom: 1px solid #dddddd;
+
 }
 .styled-table tbody tr.loading {
     opacity: 0.6;

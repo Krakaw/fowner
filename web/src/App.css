@@ -40,3 +40,8 @@ ul.ProjectsSelect li {
   cursor: pointer;
   list-style-type: none;
 }
+
+.Commits {
+  display: flex;
+  flex-direction: row;
+}

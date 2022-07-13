@@ -162,7 +162,6 @@ impl<'stmt> From<&Row<'stmt>> for Commit {
 #[cfg(test)]
 mod test {
     use crate::db::models::commit::{Commit, NewCommit};
-    use crate::db::models::feature::NewFeature;
     use crate::db::models::file_commit::FileCommit;
     use crate::server::paging::SortDir;
     use crate::test::builders::file_builder::FileBuilder;

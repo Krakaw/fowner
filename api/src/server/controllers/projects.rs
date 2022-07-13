@@ -68,14 +68,19 @@ pub async fn fetch_remote_repo(
         project,
     };
     debug!("Processing commits");
-    let commit_count = processor
+    let (commits_processed, total_commits) = processor
         .fetch_commits_and_update_db(stop_at_sha, skip_github_labels)
         .await?;
     conn.transaction()?
         .commit()
         .map_err(FownerError::Rusqlite)?;
-    debug!("{} commits processed", commit_count);
-    Ok(web::Json(json!({ "commits": commit_count })))
+    debug!(
+        "{} commits processed of {}",
+        commits_processed, total_commits
+    );
+    Ok(web::Json(
+        json!({ "commits_processed": commits_processed, "total_commits": total_commits }),
+    ))
 }
 
 pub async fn all(db: web::Data<Db>) -> Result<impl Responder> {
@@ -148,7 +153,11 @@ mod tests {
             .set_json(json!({}))
             .to_request();
         let commits: Value = test::call_and_read_body_json(&app, req).await;
-        assert_eq!(commits.get("commits").unwrap().as_u64().unwrap(), 1);
+        assert_eq!(
+            commits.get("commits_processed").unwrap().as_u64().unwrap(),
+            1
+        );
+        assert_eq!(commits.get("total_commits").unwrap().as_u64().unwrap(), 1);
         let req = test::TestRequest::get().uri("/1").to_request();
         let project: DisplayProject = test::call_and_read_body_json(&app, req).await;
         assert_eq!(project.project.id, 1);
@@ -159,6 +168,9 @@ mod tests {
             .set_json(&json!({"stop_at_sha": "no_stop"}))
             .to_request();
         let commits: Value = test::call_and_read_body_json(&app, req).await;
-        assert_eq!(commits.get("commits").unwrap().as_u64().unwrap(), 0);
+        assert_eq!(
+            commits.get("commits_processed").unwrap().as_u64().unwrap(),
+            0
+        );
     }
 }
