@@ -72,11 +72,13 @@ impl GitManager {
     pub fn fetch(&self) -> Result<(), FownerError> {
         let result = Command::new("git")
             .current_dir(&self.path)
-            .arg("fetch")
+            .arg("pull")
             .output()
             .map_err(|e| FownerError::GitError(format!("Fetch error {}", e)))?;
         if !result.status.success() {
             return Err(FownerError::Execution(String::from_utf8(result.stderr)?));
+        } else {
+            debug!("{}", String::from_utf8(result.stdout)?);
         }
         Ok(())
     }
@@ -97,10 +99,9 @@ impl GitManager {
     }
 
     pub fn clone(&self) -> Result<(), FownerError> {
-        let output = Command::new("git")
+        let result = Command::new("git")
             .current_dir(&self.path)
             .arg("clone")
-            .arg("--no-checkout")
             .arg(&self.url.clone().unwrap_or_default())
             .arg(".")
             .output()
@@ -108,11 +109,12 @@ impl GitManager {
                 eprintln!("e = {:?}", e);
                 FownerError::GitError(format!("Clone error {}", e))
             })?;
-        debug!(
-            "Clone Result {}\n Clone Error: {}",
-            String::from_utf8(output.stdout)?,
-            String::from_utf8(output.stderr)?
-        );
+        if !result.status.success() {
+            return Err(FownerError::Execution(String::from_utf8(result.stderr)?));
+        } else {
+            debug!("{}", String::from_utf8(result.stdout)?);
+        }
+
         Ok(())
     }
 }
