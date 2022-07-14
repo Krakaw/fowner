@@ -67,6 +67,10 @@ cargo test
 
 ## Examples
 
+### The web frontend
+
+![Web Example](docs/example.png)
+
 ### Adding features
 
 > Features can be added via adding `[Feature 1,Feature 2]` to pull request titles.
