@@ -23,9 +23,9 @@ export const useFeatures = (start?: string, end?: string) => useQuery(['features
     }
 )
 
-export const useUpdateProject = (projectId: number, stop_at_sha?: string, skip_github_labels?: boolean) => useQuery(['updateProject', projectId], () => {
+export const useUpdateProject = (projectId: number, stop_at_sha?: string, skip_github_labels?: boolean) => useQuery(['updateProject', projectId], (props) => {
         const body = {};
-        if (stop_at_sha !== undefined) {
+        if (stop_at_sha !== undefined && stop_at_sha.trim() !== '') {
             // @ts-ignore
             body['stop_at_sha'] = stop_at_sha;
         }
