@@ -20,6 +20,9 @@ export const useFeatures = (start?: string, end?: string) => useQuery(['features
         return fetch(`${config.apiUrl}/features/${start}/${end}`).then(res =>
             res.json()
         )
+    }, {
+        refetchOnWindowFocus: false,
+        enabled: false
     }
 )
 

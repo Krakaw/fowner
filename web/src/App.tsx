@@ -59,10 +59,8 @@ function App() {
                     {commits.start?.sha}
                 </header>
                 {projectId ?
-                    <div className={"Details"}>
-                        <Outlet/>
-
-                    </div> :
+                    <Outlet/>
+                    :
                     (
                         <>
                             <h3>Choose a project to continue</h3>

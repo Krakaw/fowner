@@ -3,6 +3,7 @@ import {useCommits} from "../hooks/queries.hooks";
 import "../styles/Table.css";
 import {useParams, useSearchParams} from "react-router-dom";
 import Features from "./Features";
+import {DateTime} from "luxon";
 
 
 function Commits() {
@@ -76,7 +77,7 @@ function Commits() {
                                 <td>{r.description}</td>
                                 <td>{r.feature_names.join(", ")}</td>
                                 <td>{r.owner_handle}</td>
-                                <td>{new Date(r.commit_time).toLocaleString()}</td>
+                                <td title={new Date(r.commit_time).toLocaleString()}>{DateTime.fromISO(r.commit_time).toRelative()}</td>
                             </tr>)
                     }
 
