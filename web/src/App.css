@@ -1,11 +1,10 @@
 .App {
+
 }
 
 .App-logo {
   width: 80px;
 }
-
-
 
 .App-header {
   background-color: #282c34;
@@ -32,8 +31,7 @@
 
 }
 
- .Features {
-  max-width: 25%;
+.Features {
 }
 
 ul.ProjectsSelect li {

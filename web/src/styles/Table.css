@@ -1,4 +1,4 @@
-.styled-table {
+table.styled-table {
     border-collapse: collapse;
     margin: 0px 0px 25px 0;
     font-size: 0.9em;
@@ -7,55 +7,55 @@
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
 }
 
-.styled-table.sticky thead {
+table.styled-table.sticky thead {
     position: sticky;
     top: 0;
 }
 
-.styled-table thead tr {
+table.styled-table thead tr {
     background-color: #009879;
     color: #ffffff;
     text-align: left;
 }
 
-.styled-table th,
-.styled-table td {
+table.styled-table th,
+table.styled-table td {
     padding: 12px 15px;
 }
 
-.no-height-fill.styled-table td {
+table.no-height-fill.styled-table td {
     padding: 5px;
 }
 
-.no-height-fill.styled-table td, .no-height-fill.styled-table tr {
+table.no-height-fill.styled-table td, table.no-height-fill.styled-table tr {
     display: block;
 }
 
-.styled-table td:first-of-type {
+table.styled-table td:first-of-type {
     padding: 3px;
 }
 
-.styled-table tbody tr {
+table.styled-table tbody tr {
     border-bottom: 1px solid #dddddd;
 
 }
-.styled-table tbody tr.loading {
+table.styled-table tbody tr.loading {
     opacity: 0.6;
 }
-.styled-table tbody tr.error {
+table.styled-table tbody tr.error {
     color: #ff5555;
     opacity: 0.8;
 }
-.styled-table tbody tr:nth-of-type(even) {
+table.styled-table tbody tr:nth-of-type(even) {
     background-color: #f3f3f3;
 }
 
-.styled-table tbody tr:last-of-type {
+table.styled-table tbody tr:last-of-type {
     border-bottom: 2px solid #009879;
 }
 
 
-.styled-table tbody tr.active-row {
+table.styled-table tbody tr.active-row {
     font-weight: bold;
     color: #009879;
 }

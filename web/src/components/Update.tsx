@@ -1,6 +1,7 @@
 import React, {useState} from "react";
 import {useUpdateProject} from "../hooks/queries.hooks";
 import Modal from "react-modal";
+
 interface UpdateProps {
     projectId: number
 }
@@ -8,7 +9,13 @@ interface UpdateProps {
 function Update(props: UpdateProps) {
     const [stopAtSha, setStopAtSha] = useState<string | undefined>(undefined);
     const [skipGithubLabels, setSkipGithubLabels] = useState<boolean | undefined>(undefined);
-    const {error, isLoading: loading, isRefetching, data = {}, refetch} = useUpdateProject(props.projectId, stopAtSha, skipGithubLabels);
+    const {
+        error,
+        isLoading: loading,
+        isRefetching,
+        data = {},
+        refetch
+    } = useUpdateProject(props.projectId, stopAtSha, skipGithubLabels);
     const isLoading = loading || isRefetching;
     const [showModal, setShowModal] = useState(false);
     return (
@@ -17,21 +24,26 @@ function Update(props: UpdateProps) {
                 isOpen={showModal}
                 contentLabel="Fetch Updates From Project"
                 onRequestClose={() => {
-                    setShowModal(false)}}
+                    setShowModal(false)
+                }}
                 shouldCloseOnEsc={true}
                 shouldCloseOnOverlayClick={true}
             >
                 <div>
-                    <input type={"text"} disabled={isLoading} placeholder={"Stop At Sha (Optional)"} onChange={(e) => {
-                        const sha = e.target.value;
-                        setStopAtSha(sha);
-                    }}  />
-                    <label><input type={"checkbox"} disabled={isLoading}
-                    checked={skipGithubLabels}
-                                  onChange={(e) => {
-                        const checked = e.target.checked;
-                        setSkipGithubLabels(checked);
-                    }} />Do not fetch Github Tags</label>
+                    <fieldset>
+                        <input type={"text"} disabled={isLoading} placeholder={"Stop At Sha (Optional)"}
+                               onChange={(e) => {
+                                   const sha = e.target.value;
+                                   setStopAtSha(sha);
+                               }}/>
+                        <br/>
+                        <label><input type={"checkbox"} disabled={isLoading}
+                                      checked={skipGithubLabels}
+                                      onChange={(e) => {
+                                          const checked = e.target.checked;
+                                          setSkipGithubLabels(checked);
+                                      }}/>Do not fetch Github tags</label>
+                    </fieldset>
                 </div>
                 <div style={{flexDirection: 'column'}}>
                     <div>Processed: {isLoading ? 'Loading...' : data.commits_processed !== undefined ? `${data.commits_processed}` : 'N/A'}</div>
@@ -40,7 +52,10 @@ function Update(props: UpdateProps) {
                 <button disabled={isLoading} onClick={() => {
                     refetch()
                 }}>Fetch{isLoading && 'ing'}</button>
-                <button onClick={() => {setShowModal(false)}}>Cancel</button>
+                <button onClick={() => {
+                    setShowModal(false)
+                }}>Close
+                </button>
             </Modal>
 
             <button disabled={isLoading || !!error} onClick={() => {

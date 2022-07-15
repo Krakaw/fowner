@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {useCommits} from "../hooks/queries.hooks";
-import "./Table.css";
+import "../styles/Table.css";
 import {useParams, useSearchParams} from "react-router-dom";
 import Features from "./Features";
 
