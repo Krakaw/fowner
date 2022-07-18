@@ -5,7 +5,7 @@ import reportWebVitals from './reportWebVitals';
 import ReactDOM from "react-dom/client";
 import {HashRouter, Route, Routes,} from "react-router-dom";
 import Commits from "./components/Commits";
-import Files from "./routes/Files";
+import FileBetweenCommits from "./routes/FileBetweenCommits";
 
 const root = ReactDOM.createRoot(
     document.getElementById('root') as HTMLElement
@@ -16,7 +16,7 @@ root.render(
             <Routes>
                 <Route path={"/"} element={<App/>}>
                     <Route path={"/projects/:projectId"} element={<Commits/>}/>
-                    <Route path={"/files/:projectId/:startSha/:endSha"} element={<Files/>}/>
+                    <Route path={"/files/:projectId/:startSha/:endSha"} element={<FileBetweenCommits/>}/>
                 </Route>
             </Routes>
         </HashRouter>

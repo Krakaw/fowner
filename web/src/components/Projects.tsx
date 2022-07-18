@@ -23,18 +23,29 @@ export const Projects = (props: ProjectProps) => {
                 const url = id ? `/projects/${id}` : '/';
                 navigate(url);
             }}
-            >
+        >
             <option value={""}>Select Project</option>
             {data.map((r: any) => <option key={r.id} value={r.id}>{r.name} - {r.path}</option>)}
         </select>
     ) : (
-        <ul className={"ProjectsSelect"}>
-            {data.map((r: any) => <li key={r.id}>
-                <Link to={`/projects/${r.id}`}>
-                    {r.name} - {r.path}
-                </Link>
-            </li>)}
-        </ul>
+        <table className={"styled-table"} style={{width: '100%'}}>
+            <thead>
+            <tr>
+                <th>Choose a Project</th>
+            </tr>
+            </thead>
+            <tbody>
+            {data.map((r: any) => <tr key={r.id}>
+                <td>
+                    <Link to={`/projects/${r.id}`}>
+                        {r.name} - {r.path}
+                    </Link>
+                </td>
+
+            </tr>)}
+            </tbody>
+
+        </table>
     )
 }
 export default Projects;

@@ -3,7 +3,7 @@ import './App.css';
 import Projects from "./components/Projects";
 import {QueryClient, QueryClientProvider} from 'react-query'
 import config from "./helpers/config";
-import {Outlet, useNavigate, useParams} from "react-router-dom";
+import {Link, Outlet, useNavigate, useParams} from "react-router-dom";
 import Update from "./components/Update";
 
 
@@ -45,8 +45,9 @@ function App() {
 
             <div className="App">
                 <header className="App-header">
-                    <img src="/images/logo.svg" className="App-logo" alt="fowner-logo"/>
-
+                    <Link to={"/"}>
+                        <img src="/images/logo.svg" className="App-logo" alt="fowner-logo"/>
+                    </Link>
                     <span style={{flex: 1}} onClick={() => {
                         setCount(count + 1)
                     }}></span>
@@ -61,12 +62,7 @@ function App() {
                 {projectId ?
                     <Outlet/>
                     :
-                    (
-                        <>
-                            <h3>Choose a project to continue</h3>
-                            <Projects showSelect={false}/>
-                        </>
-                    )
+                    <Projects showSelect={false}/>
                 }
 
             </div>
