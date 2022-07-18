@@ -1,9 +1,11 @@
-use crate::git::history::GitHistory;
-use crate::FownerError;
-use chrono::{Duration, NaiveDateTime};
-use log::{debug, trace};
 use std::path::PathBuf;
 use std::process::Command;
+
+use chrono::{Duration, NaiveDateTime};
+use log::{debug, trace};
+
+use crate::git::history::GitHistory;
+use crate::FownerError;
 
 const GIT_HISTORY_LOG_FORMAT: &str = "---%n%an%n%H%n%P%n%ad%n%s";
 
@@ -70,6 +72,12 @@ impl GitManager {
     }
 
     pub fn fetch(&self) -> Result<(), FownerError> {
+        Command::new("git")
+            .current_dir(&self.path)
+            .arg("reset")
+            .arg("--hard")
+            .output()
+            .map_err(|e| FownerError::GitError(format!("Reset error {}", e)))?;
         let result = Command::new("git")
             .current_dir(&self.path)
             .arg("pull")
@@ -105,10 +113,7 @@ impl GitManager {
             .arg(&self.url.clone().unwrap_or_default())
             .arg(".")
             .output()
-            .map_err(|e| {
-                eprintln!("e = {:?}", e);
-                FownerError::GitError(format!("Clone error {}", e))
-            })?;
+            .map_err(|e| FownerError::GitError(format!("Clone error {}", e)))?;
         if !result.status.success() {
             return Err(FownerError::Execution(String::from_utf8(result.stderr)?));
         } else {

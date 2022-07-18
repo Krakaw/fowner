@@ -38,6 +38,8 @@ pub enum FownerError {
     AwcSendRequest(#[from] awc::error::SendRequestError),
     #[error("AWC JSON Payload Error: {0}")]
     AwcPayload(#[from] awc::error::JsonPayloadError),
+    #[error("File Cannot Have Features: {0}")]
+    FileCannotHaveFeatures(String),
     #[error("Internal Error: {0}")]
     Internal(String),
 }

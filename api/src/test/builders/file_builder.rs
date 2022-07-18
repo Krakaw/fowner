@@ -1,16 +1,18 @@
+use std::env::temp_dir;
+
+use chrono::Utc;
+
 use crate::db::models::commit::NewCommit;
 use crate::db::models::feature::NewFeature;
 use crate::db::models::file::NewFile;
 use crate::db::models::file_commit::FileCommit;
-use crate::db::models::file_feature::NewFileFeature;
 use crate::{Connection, File, FownerError};
-use chrono::Utc;
-use std::env::temp_dir;
 
 #[allow(dead_code)]
 pub struct FileBuilder {
     pub project_id: u32,
     pub path: String,
+    pub no_features: bool,
     pub features: Vec<String>,
     pub commits: Vec<String>,
     #[doc(hidden)]
@@ -23,6 +25,7 @@ impl Default for FileBuilder {
         Self {
             project_id: 0,
             path: path.to_string_lossy().to_string(),
+            no_features: false,
             features: vec![],
             commits: vec![],
             __non_exhaustive: (),
@@ -44,6 +47,7 @@ impl FileBuilder {
         let file = NewFile {
             project_id: self.project_id,
             path: self.path,
+            no_features: self.no_features,
         }
         .save(conn)
         .unwrap();
@@ -56,12 +60,7 @@ impl FileBuilder {
             }
             .save(conn)
             .unwrap();
-            NewFileFeature {
-                file_id: file.id,
-                feature_id: feature.id,
-            }
-            .save(conn)
-            .unwrap();
+            file.add_feature(feature.id, conn).unwrap();
         }
 
         let mut last_sha = None;

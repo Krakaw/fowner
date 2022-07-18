@@ -48,15 +48,16 @@ pub fn migrations() -> Migrations<'static> {
             r#"
             CREATE TABLE IF NOT EXISTS files
             (
-                id         INTEGER  PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER NOT NULL,
-                path       TEXT NOT NULL,
-                created_at INT  NOT NULL,
-                updated_at INT  NOT NULL,
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id  INTEGER NOT NULL,
+                path        TEXT    NOT NULL,
+                no_features INT DEFAULT 0 NOT NULL,
+                created_at  INT     NOT NULL,
+                updated_at  INT     NOT NULL,
                 CONSTRAINT fk_projects
                     FOREIGN KEY (project_id)
-                    REFERENCES projects(id)
-                    ON DELETE CASCADE
+                        REFERENCES projects (id)
+                        ON DELETE CASCADE
             );
         "#,
         ),
@@ -151,6 +152,7 @@ pub fn migrations() -> Migrations<'static> {
         ),
     ])
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,8 +1,10 @@
+use chrono::NaiveDateTime;
+use log::{debug, error};
+
 use crate::db::models::commit::{Commit, NewCommit};
 use crate::db::models::feature::NewFeature;
 use crate::db::models::file::NewFile;
 use crate::db::models::file_commit::FileCommit;
-use crate::db::models::file_feature::NewFileFeature;
 use crate::db::models::file_owner::NewFileOwner;
 use crate::db::models::owner::NewOwner;
 use crate::db::models::project::{NewProject, Project};
@@ -10,8 +12,6 @@ use crate::db::Connection;
 use crate::errors::FownerError;
 use crate::git::github::Github;
 use crate::git::manager::GitManager;
-use chrono::NaiveDateTime;
-use log::{debug, error};
 
 pub struct Processor<'a> {
     pub conn: &'a Connection<'a>,
@@ -118,6 +118,7 @@ impl<'a> Processor<'a> {
                 let file = NewFile {
                     project_id: project.id,
                     path: file_path,
+                    no_features: false,
                 }
                 .save(self.conn)?;
 
@@ -139,11 +140,7 @@ impl<'a> Processor<'a> {
 
                 // 4d. Attach the features to the files
                 for feature in &features {
-                    NewFileFeature {
-                        file_id: file.id,
-                        feature_id: feature.id,
-                    }
-                    .save(self.conn)?;
+                    let _f = file.add_feature(feature.id, self.conn);
                 }
             }
             debug!(
