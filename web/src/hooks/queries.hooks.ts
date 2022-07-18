@@ -38,6 +38,7 @@ export const useFiles = (start?: string, end?: string) => useQuery(['files', sta
         enabled: false
     }
 )
+
 export const useUpdateProject = (projectId: number, stop_at_sha?: string, skip_github_labels?: boolean) => useQuery(['updateProject', projectId], (props) => {
         const body = {};
         if (stop_at_sha !== undefined && stop_at_sha.trim() !== '') {
@@ -61,5 +62,22 @@ export const useUpdateProject = (projectId: number, stop_at_sha?: string, skip_g
     {
         refetchOnWindowFocus: false,
         enabled: false
+    }
+)
+
+
+export const useDeleteProject = (projectId: number) => useQuery(['deleteProject', projectId], () => {
+        return fetch(`${config.apiUrl}/projects/${projectId}`, {
+            method: 'DELETE',
+            headers: {
+                'content-type': 'application/json'
+            },
+        }).then(res =>
+            res.json()
+        )
+    },
+    {
+        refetchOnWindowFocus: false,
+        enabled: false,
     }
 )
