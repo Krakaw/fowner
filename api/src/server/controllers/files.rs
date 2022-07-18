@@ -2,7 +2,6 @@ use actix_web::{web, Responder, Result};
 
 use crate::db::models::commit::Commit;
 use crate::db::models::file_commit::FileCommit;
-use crate::db::models::file_feature::FileFeature;
 use crate::server::controllers::SearchRequest;
 use crate::{Connection, Db, File};
 

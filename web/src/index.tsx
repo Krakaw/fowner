@@ -3,11 +3,9 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import ReactDOM from "react-dom/client";
-import {
-    Routes,
-    Route, HashRouter,
-} from "react-router-dom";
+import {HashRouter, Route, Routes,} from "react-router-dom";
 import Commits from "./components/Commits";
+import Files from "./routes/Files";
 
 const root = ReactDOM.createRoot(
     document.getElementById('root') as HTMLElement
@@ -17,8 +15,8 @@ root.render(
         <HashRouter>
             <Routes>
                 <Route path={"/"} element={<App/>}>
-                    <Route path={"/projects/:projectId"} element={<Commits/>}>
-                    </Route>
+                    <Route path={"/projects/:projectId"} element={<Commits/>}/>
+                    <Route path={"/files/:projectId/:startSha/:endSha"} element={<Files/>}/>
                 </Route>
             </Routes>
         </HashRouter>

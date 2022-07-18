@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from "react";
 import {useCommits} from "../hooks/queries.hooks";
 import "../styles/Table.css";
-import {useParams, useSearchParams} from "react-router-dom";
+import {Link, useParams, useSearchParams} from "react-router-dom";
 import Features from "./Features";
 import {DateTime} from "luxon";
 
@@ -32,7 +32,9 @@ function Commits() {
                 <table className={"styled-table sticky"}>
                     <thead>
                     <tr>
-                        <th>&nbsp;</th>
+                        <th>
+                            {start && end && (<Link to={`/files/${projectId}/${start}/${end}`}>Files</Link>)}
+                        </th>
                         <th>SHA</th>
                         <th>Description</th>
                         <th>Features</th>

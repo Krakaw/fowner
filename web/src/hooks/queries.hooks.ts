@@ -26,6 +26,18 @@ export const useFeatures = (start?: string, end?: string) => useQuery(['features
     }
 )
 
+export const useFiles = (start?: string, end?: string) => useQuery(['files', start, end], () => {
+        if (!start || !end) {
+            throw Error('Waiting for shas');
+        }
+        return fetch(`${config.apiUrl}/files/${start}/${end}`).then(res =>
+            res.json()
+        )
+    }, {
+        refetchOnWindowFocus: false,
+        enabled: false
+    }
+)
 export const useUpdateProject = (projectId: number, stop_at_sha?: string, skip_github_labels?: boolean) => useQuery(['updateProject', projectId], (props) => {
         const body = {};
         if (stop_at_sha !== undefined && stop_at_sha.trim() !== '') {
