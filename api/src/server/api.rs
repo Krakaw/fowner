@@ -1,5 +1,6 @@
-use crate::server::controllers::{commits, features, files, owners, projects};
-use crate::{Db, FownerError};
+use std::net::SocketAddr;
+use std::path::PathBuf;
+
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::dev::{fn_service, ServiceRequest, ServiceResponse};
@@ -7,15 +8,18 @@ use actix_web::middleware::Logger;
 use actix_web::{web, App, HttpResponse, HttpServer};
 use log::{info, warn};
 use serde_json::json;
-use std::net::SocketAddr;
-use std::path::PathBuf;
+
+use crate::server::controllers::{commits, features, files, owners, projects};
+use crate::{Db, FownerError};
 
 pub struct Api;
 
 pub struct AppState {
     public_asset_path: PathBuf,
 }
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 impl Api {
     pub async fn start(
         db: Db,
@@ -40,6 +44,11 @@ impl Api {
                     "/{from_commit}/{to_commit}",
                     web::get().to(features::get_features_between_commits),
                 ))
+                 .service(web::scope("/files").route(
+                    "/{from_commit}/{to_commit}",
+                    web::get().to(files::get_files_between_commits),
+                ))
+                
                 .service(
                     web::scope("/owners")
                         .service(
@@ -65,7 +74,12 @@ impl Api {
                                         .route("", web::post().to(projects::fetch_remote_repo)),
                                 )
                                 .service(
-                                    web::scope("/files").route("", web::get().to(files::search)),
+                                    web::scope("/files")
+                                        .route(
+                                            "/{file_id}/features",
+                                            web::delete().to(files::remove_features),
+                                        )
+                                        .route("", web::get().to(files::search)),
                                 )
                                 .service(
                                     web::scope("/commits")

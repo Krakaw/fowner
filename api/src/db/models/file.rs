@@ -10,7 +10,6 @@ use crate::db::models::file_feature::{FileFeature, NewFileFeature};
 use crate::db::models::{extract_all, extract_first};
 use crate::db::Connection;
 use crate::errors::FownerError;
-use crate::Db;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct File {
@@ -26,7 +25,7 @@ pub struct File {
 }
 
 impl File {
-    fn sql(where_clause: Option<String>, limit_clause: Option<String>) -> String {
+    pub fn sql(where_clause: Option<String>, limit_clause: Option<String>) -> String {
         format!(
             r#"
             SELECT f.id,
@@ -67,7 +66,10 @@ impl File {
         let mut stmt = conn.prepare(&File::sql(None, None))?;
         extract_all!(params![project_id], stmt)
     }
-
+    pub fn load(project_id: u32, file_id: u32, conn: &Connection) -> Result<File, FownerError> {
+        let mut stmt = conn.prepare(&File::sql(Some("AND f.id = ?2".to_string()), None))?;
+        extract_first!(params![project_id, file_id], stmt)
+    }
     pub fn load_by_path(
         project_id: u32,
         path: String,
@@ -82,9 +84,8 @@ impl File {
         query: String,
         limit: u32,
         offset: u32,
-        db: &Db,
+        conn: &Connection,
     ) -> Result<Vec<File>, FownerError> {
-        let conn = db.pool.get()?;
         let mut stmt = conn.prepare(&File::sql(
             Some("AND path LIKE ?2".to_string()),
             Some("LIMIT ?3 OFFSET ?4".to_string()),
@@ -106,6 +107,14 @@ impl File {
             feature_id,
         }
         .save(conn)
+    }
+
+    pub fn remove_features(&self, conn: &Connection) -> Result<usize, FownerError> {
+        let sql = "UPDATE files SET no_features = 1 WHERE id = ?1;";
+        let mut stmt = conn.prepare(sql)?;
+        let result = stmt.execute(params![self.id])?;
+        FileFeature::remove_features_from_file(self.id, conn)?;
+        Ok(result)
     }
 
     pub fn generate_feature_file(

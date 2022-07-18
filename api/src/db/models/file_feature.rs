@@ -1,10 +1,11 @@
+use chrono::NaiveDateTime;
+use r2d2_sqlite::rusqlite::{params, Row};
+
 use crate::db::models::commit::Commit;
 use crate::db::models::extract_first;
 use crate::db::models::feature::Feature;
 use crate::db::Connection;
 use crate::errors::FownerError;
-use chrono::NaiveDateTime;
-use r2d2_sqlite::rusqlite::{params, Row};
 
 #[derive(Debug)]
 pub struct FileFeature {
@@ -20,6 +21,16 @@ pub struct NewFileFeature {
 }
 
 impl FileFeature {
+    pub fn remove_features_from_file(
+        file_id: u32,
+        conn: &Connection,
+    ) -> Result<usize, FownerError> {
+        let sql = "DELETE FROM file_features WHERE file_id = ?1";
+        let mut stmt = conn.prepare(sql)?;
+        let result = stmt.execute(params![file_id])?;
+        Ok(result)
+    }
+
     pub fn load(
         file_id: u32,
         feature_id: u32,

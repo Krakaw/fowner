@@ -1,13 +1,15 @@
-mod migrations;
-pub mod models;
-pub mod processor;
+use std::path::Path;
+use std::sync::Arc;
 
-use crate::FownerError;
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::rusqlite::{Statement, Transaction};
 use r2d2_sqlite::SqliteConnectionManager;
-use std::path::Path;
-use std::sync::Arc;
+
+use crate::FownerError;
+
+mod migrations;
+pub mod models;
+pub mod processor;
 
 #[derive(Debug, Clone)]
 pub struct Db {
@@ -63,6 +65,7 @@ impl<'a> From<Transaction<'a>> for Connection<'a> {
         Self::Transaction(transaction)
     }
 }
+
 impl<'a> Connection<'a> {
     #[inline]
     pub fn prepare(&self, query: &str) -> Result<Statement, FownerError> {
