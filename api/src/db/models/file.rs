@@ -46,12 +46,12 @@ impl File {
                     GROUP BY fc.file_id
                     ORDER BY c.commit_time DESC)                           AS commit_shas,
                  (SELECT GROUP_CONCAT(handle, ',')
-                    FROM (SELECT coalesce(po.handle, o.handle) AS handle
+                    FROM (SELECT coalesce(coalesce(po.name, po.handle),coalesce(o.name, o.handle)) AS handle
                           FROM file_owners fo
                                    INNER JOIN owners o on fo.owner_id = o.id
                                    LEFT JOIN owners po ON po.id = o.primary_owner_id
                           WHERE fo.file_id = f.id
-                          GROUP BY coalesce(po.handle, o.handle)
+                          GROUP BY coalesce(coalesce(po.name, po.handle),coalesce(o.name, o.handle))
                           ORDER BY fo.created_at DESC
                           )
                     ) AS owners
