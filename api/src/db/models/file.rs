@@ -353,13 +353,7 @@ mod test {
         }
         .save(&conn)
         .unwrap();
-        let owner = NewOwner {
-            handle: "Krakaw".to_string(),
-            name: None,
-            primary_owner_id: None,
-        }
-        .save(&conn)
-        .unwrap();
+
         let file = NewFile {
             project_id: project.id,
             path: "src/main.rs".to_string(),
@@ -447,7 +441,7 @@ mod test {
         );
         assert_eq!(
             db_file.owners,
-            vec!["Krakaw".to_string(), "NewOwner".to_string()]
+            vec!["NewOwner".to_string(), "Krakaw".to_string()]
         );
     }
 }
