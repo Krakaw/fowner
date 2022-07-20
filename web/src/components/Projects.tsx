@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {useRepositories} from "../hooks/queries.hooks";
-import {Link, useNavigate} from "react-router-dom";
+import {Link} from "react-router-dom";
 import Update from "./Update";
 import Delete from "./Delete";
 
@@ -11,7 +11,6 @@ interface ProjectProps {
 }
 
 export const Projects = (props: ProjectProps) => {
-    let navigate = useNavigate();
     const {isLoading, error, data = []} = useRepositories();
     const [count, setCount] = useState(0);
     if (isLoading) return <>Loading...</>

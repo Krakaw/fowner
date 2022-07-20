@@ -2,13 +2,24 @@ import {useFiles} from "../hooks/queries.hooks";
 import "../styles/Table.css";
 import {useEffect} from "react";
 import {useParams} from "react-router-dom";
+import config from "../helpers/config";
 
 
 function FileBetweenCommits() {
-    const {startSha: start, endSha: end} = useParams();
+    const {projectId, startSha: start, endSha: end} = useParams();
     const {isLoading: loading = false, isRefetching, error = false, data = [], refetch} = useFiles(start, end);
     const isLoading = loading || isRefetching;
     const inputPending = (!start || !end);
+    const unlinkFile = (fileId: number) => {
+        if (!window.confirm("This will remove all features linked with the file and stop any future features being linked.")) {
+            return;
+        }
+        fetch(`${config.apiUrl}/projects/${projectId}/files/${fileId}/features`, {
+            method: 'DELETE',
+        }).then(() => {
+            refetch();
+        })
+    };
     useEffect(() => {
         if (start && end) {
             refetch();
@@ -17,8 +28,8 @@ function FileBetweenCommits() {
     return (
         <table style={{flex: 1}} className={"styled-table sticky"}>
             <thead>
-            <tr>
-                <th colSpan={3} style={{textAlign: 'center'}}>
+            <tr className={'no-sticky'}>
+                <th colSpan={4} style={{textAlign: 'center'}}>
                     Commits between {start?.substring(0, 7)} and {end?.substring(0, 7)}
                 </th>
             </tr>
@@ -26,6 +37,7 @@ function FileBetweenCommits() {
                 <th>Path</th>
                 <th>Features</th>
                 <th>Owners</th>
+                <th>&nbsp;</th>
             </tr>
             </thead>
             <tbody>
@@ -43,6 +55,13 @@ function FileBetweenCommits() {
                 <td>{r.path}</td>
                 <td className={r.no_features ? 'loading' : ''}>{r.no_features ? "Not Tracked" : r.feature_names.join(", ")}</td>
                 <td>{r.owners.join(", ")}</td>
+                <td>
+                    <button className={"icon-button"} onClick={() => {
+                        unlinkFile(r.id);
+                    }}>
+                        🗑
+                    </button>
+                </td>
             </tr>)}
             </tbody>
         </table>)

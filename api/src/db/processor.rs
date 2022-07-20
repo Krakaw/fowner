@@ -64,7 +64,7 @@ impl<'a> Processor<'a> {
                 name: None,
                 primary_owner_id: None,
             }
-            .save(self.conn)?;
+            .save_or_load(self.conn)?;
 
             // 2. We need to create a Commit for the hash
             let commit_date = NaiveDateTime::from_timestamp(git_history.timestamp as i64, 0);

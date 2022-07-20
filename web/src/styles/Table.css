@@ -7,7 +7,7 @@ table.styled-table {
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
 }
 
-table.styled-table.sticky thead {
+table.styled-table.sticky thead tr:not(.no-sticky) {
     position: sticky;
     top: 0;
     z-index: 2;

@@ -6,6 +6,7 @@ import ReactDOM from "react-dom/client";
 import {HashRouter, Route, Routes,} from "react-router-dom";
 import Commits from "./components/Commits";
 import FileBetweenCommits from "./routes/FileBetweenCommits";
+import Owner from "./routes/Owner";
 
 const root = ReactDOM.createRoot(
     document.getElementById('root') as HTMLElement
@@ -17,6 +18,7 @@ root.render(
                 <Route path={"/"} element={<App/>}>
                     <Route path={"/projects/:projectId"} element={<Commits/>}/>
                     <Route path={"/files/:projectId/:startSha/:endSha"} element={<FileBetweenCommits/>}/>
+                    <Route path={"/owners/:ownerId"} element={<Owner/>}/>
                 </Route>
             </Routes>
         </HashRouter>

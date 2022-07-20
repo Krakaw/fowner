@@ -49,7 +49,7 @@ impl FileCommit {
         }
         let ids = file_ids
             .iter()
-            .map(|r| format!("{}", r.to_string()))
+            .map(|r| r.to_string())
             .collect::<Vec<String>>()
             .join(",");
         let mut stmt = conn.prepare(&File::sql(Some(format!("AND f.id IN ({})", ids)), None))?;

@@ -13,6 +13,16 @@ export const useCommits = (projectId: number, page: number = 0, limit: number = 
     )
 )
 
+export const useOwner = (ownerId: number) => useQuery(['owner', ownerId], () =>
+    fetch(`${config.apiUrl}/owners/${ownerId}`).then(res =>
+        res.json()
+    )
+)
+export const useOwners = () => useQuery(['owners'], () =>
+    fetch(`${config.apiUrl}/owners`).then(res =>
+        res.json()
+    )
+)
 export const useFeatures = (start?: string, end?: string) => useQuery(['features', start, end], () => {
         if (!start || !end) {
             throw Error('Waiting for shas');

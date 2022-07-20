@@ -8,8 +8,7 @@ import {Link, Outlet, useParams} from "react-router-dom";
 const queryClient = new QueryClient()
 
 function App() {
-    const params = useParams();
-    const projectId = params.projectId ? +params.projectId : undefined;
+    const {projectId, ownerId} = useParams();
 
     return (
         <QueryClientProvider client={queryClient}>
@@ -18,9 +17,8 @@ function App() {
                     <Link to={"/"}>
                         <img src="/images/logo.svg" className="App-logo" alt="fowner-logo"/>
                     </Link>
-
                 </header>
-                {projectId ?
+                {projectId || ownerId ?
                     <Outlet/>
                     :
                     <Projects showSelect={false}/>

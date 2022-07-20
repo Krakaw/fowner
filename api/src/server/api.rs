@@ -44,13 +44,13 @@ impl Api {
                     "/{from_commit}/{to_commit}",
                     web::get().to(features::get_features_between_commits),
                 ))
-                 .service(web::scope("/files").route(
+                .service(web::scope("/files").route(
                     "/{from_commit}/{to_commit}",
                     web::get().to(files::get_files_between_commits),
                 ))
-                
                 .service(
                     web::scope("/owners")
+                        .route("", web::get().to(owners::all))
                         .service(
                             web::scope("/search/{owner_handle}")
                                 .route("", web::get().to(owners::get_owners_by_handle)),

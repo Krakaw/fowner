@@ -1,3 +1,5 @@
+#![allow(clippy::large_enum_variant)]
+
 use std::path::Path;
 use std::sync::Arc;
 
@@ -20,6 +22,7 @@ impl Db {
     pub fn new(connection_string: &Path) -> Result<Self, FownerError> {
         let sqlite_connection_manager =
             SqliteConnectionManager::file(connection_string).with_init(|c| {
+                // Performance tuning
                 c.execute_batch(
                     r#"
                     PRAGMA journal_mode = WAL;
@@ -27,15 +30,12 @@ impl Db {
                     PRAGMA temp_store = memory;
                     PRAGMA mmap_size = 30000000000;
                     PRAGMA page_size = 32768;
-                    PRAGMA foreign_keys = ON
+                    PRAGMA foreign_keys = ON;
                     "#,
                 )
             });
         let sqlite_pool = Pool::new(sqlite_connection_manager)?;
         let pool = Arc::new(sqlite_pool);
-
-        // Performance tuning
-
         Ok(Db { pool })
     }
 
