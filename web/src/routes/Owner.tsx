@@ -22,7 +22,7 @@ function Owner() {
         }).then(() => {
             refetch();
         });
-    }, [name, primaryOwnerId]);
+    }, [name, primaryOwnerId, ownerId, refetch]);
     useEffect(() => {
         setName(data.name || '');
         setPrimaryOwnerId(data.primary_owner_id || '')

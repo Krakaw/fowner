@@ -3,13 +3,13 @@
 }
 
 .App-logo {
-    width: 80px;
+    width: 50px;
 }
 
 .App-header {
     background-color: #282c34;
-    min-height: 80px;
-    max-height: 80px;
+    min-height: 50px;
+    max-height: 50px;
     display: flex;
     font-size: calc(10px + 2vmin);
     color: white;
