@@ -1,11 +1,12 @@
-use r2d2_sqlite::rusqlite::types::ToSqlOutput;
-use r2d2_sqlite::rusqlite::ToSql;
-use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
 use std::fmt::{Display, Formatter};
 
+use r2d2_sqlite::rusqlite::ToSql;
+use r2d2_sqlite::rusqlite::types::ToSqlOutput;
+use serde::{Deserialize, Serialize};
+use serde_with::{DisplayFromStr, serde_as};
+
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Paging {
     #[serde(default = "missing_limit")]
     #[serde_as(as = "DisplayFromStr")]
@@ -22,7 +23,7 @@ pub struct Paging {
     pub sort_dir: Option<SortDir>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum SortDir {
     Asc,
     Desc,

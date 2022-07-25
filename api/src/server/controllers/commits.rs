@@ -1,7 +1,8 @@
-use crate::db::models::commit::Commit;
-use crate::server::controllers::SearchRequest;
+use actix_web::{Responder, Result, web};
+
 use crate::{Connection, Db};
-use actix_web::{web, Responder, Result};
+use crate::db::models::commit::Commit;
+use crate::server::controllers::{PagingResponse, SearchRequest};
 
 pub async fn search(
     db: web::Data<Db>,
@@ -12,7 +13,8 @@ pub async fn search(
     let project_id = project_id.into_inner();
     let db = db.get_ref();
     let conn = Connection::try_from(db)?;
-    let commits = Commit::search(
+    let mut paging_response = query.paging.clone();
+    let (total_count, commits) = Commit::search(
         project_id,
         query.q,
         query.paging.limit,
@@ -22,5 +24,9 @@ pub async fn search(
         &conn,
     )?;
 
-    Ok(web::Json(commits))
+    paging_response.total = total_count;
+    Ok(web::Json(PagingResponse {
+        paging: paging_response,
+        data: commits,
+    }))
 }

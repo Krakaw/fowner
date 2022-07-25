@@ -7,8 +7,8 @@ export const useRepositories = () => useQuery(['repositories'], () =>
     )
 )
 
-export const useCommits = (projectId: number, page: number = 0, limit: number = 50) => useQuery(['commits', projectId], () =>
-    fetch(`${config.apiUrl}/projects/${projectId}/commits?offset=${page * limit}`).then(res =>
+export const useCommits = (projectId: number, page: number = 0, limit: number = 50) => useQuery(['commits', projectId, page, limit], () =>
+    fetch(`${config.apiUrl}/projects/${projectId}/commits?limit=${limit}&offset=${page * limit}`).then(res =>
         res.json()
     )
 )

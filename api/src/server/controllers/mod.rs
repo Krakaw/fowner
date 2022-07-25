@@ -1,5 +1,6 @@
-use crate::server::paging::Paging;
 use serde::{Deserialize, Serialize};
+
+use crate::server::paging::Paging;
 
 pub mod commits;
 pub mod features;
@@ -13,4 +14,10 @@ pub struct SearchRequest {
     q: Option<String>,
     #[serde(flatten)]
     paging: Paging,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PagingResponse<T> {
+    paging: Paging,
+    data: Vec<T>
 }

@@ -14,7 +14,7 @@ function Commits() {
     const [page, setPage] = useState(0);
     // eslint-disable-next-line
     const [limit, _setLimit] = useState(100);
-    const {isLoading, error, data = [], refetch} = useCommits(projectId ? parseInt(projectId) : 0, page, limit)
+    const {isLoading, error, data = {data: []}, refetch} = useCommits(projectId ? parseInt(projectId) : 0, page, limit)
 
     useEffect(() => {
         refetch()
@@ -44,7 +44,7 @@ function Commits() {
                     </thead>
                     <tbody>
                     {
-                        data.map((r: any) =>
+                        data.data.map((r: any) =>
                             <tr key={r.sha} className={(start === r.sha || end === r.sha) ? "active-row" : ""}>
                                 <td>
                                     <input type={"checkbox"}
@@ -86,11 +86,11 @@ function Commits() {
                     </tbody>
                     <tfoot>
                     <tr>
-                        <td>
+                        <td colSpan={6}>
+                            <button disabled={page === 0} onClick={() => setPage(0)}>First</button>
                             <button disabled={page === 0} onClick={() => setPage(Math.max(page - 1, 0))}>Prev</button>
-                        </td>
-                        <td>
                             <button onClick={() => setPage(page + 1)}>Next</button>
+                            <button onClick={() => setPage(Math.floor(data.paging.total / limit))}>Last</button>
                         </td>
                     </tr>
                     </tfoot>

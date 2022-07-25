@@ -1,12 +1,14 @@
-use crate::db::models::project::NewProject;
-use crate::db::Connection;
-use crate::git::manager::GitManager;
-use crate::{Db, FownerError, Processor, Project};
+use std::path::PathBuf;
+
 use actix_web::{web, Responder, Result};
 use log::debug;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::path::PathBuf;
+
+use crate::db::models::project::NewProject;
+use crate::db::Connection;
+use crate::git::manager::GitManager;
+use crate::{Db, FownerError, Processor, Project};
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct FetchRequest {
@@ -110,13 +112,15 @@ pub async fn destroy(db: web::Data<Db>, path: web::Path<u32>) -> Result<impl Res
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::db::models::project::DisplayProject;
-    use crate::test::tests::TestHandler;
     use actix_http::Request;
     use actix_web::dev::Service;
     use actix_web::{dev, error::Error as HttpError, test, web, web::Data, App};
     use serde_json::Value;
+
+    use crate::db::models::project::DisplayProject;
+    use crate::test::tests::TestHandler;
+
+    use super::*;
 
     async fn init(
         db: &Db,
@@ -133,6 +137,7 @@ mod tests {
         )
         .await
     }
+
     #[actix_web::test]
     async fn test_controller() {
         let handler = TestHandler::init();
