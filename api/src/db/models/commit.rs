@@ -1,9 +1,11 @@
+use std::collections::HashMap;
+
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
 
-use crate::db::Connection;
 use crate::db::models::{extract_all_and_count, extract_first};
+use crate::db::Connection;
 use crate::errors::FownerError;
 use crate::server::paging::SortDir;
 
@@ -84,6 +86,7 @@ impl Commit {
 
                    c.created_at,
                    c.updated_at,
+                   -- This must always be the last column
                    COUNT(*) OVER () AS total_count
             FROM commits c
             LEFT JOIN owners o ON c.owner_id = o.id
@@ -123,6 +126,7 @@ impl Commit {
         ))?;
         extract_first!(params![project_id], stmt)
     }
+
     pub fn search(
         project_id: u32,
         query: Option<String>,
@@ -131,7 +135,7 @@ impl Commit {
         sort: Option<String>,
         sort_dir: Option<SortDir>,
         conn: &Connection,
-    ) -> Result<(u64, Vec<Self>), FownerError> {
+    ) -> Result<(i64, Vec<Self>), FownerError> {
         let sort_field = Self::sort_by_field(sort);
         let mut stmt = conn.prepare(&Commit::sql(
             "WHERE c.project_id = ?1 AND (?2 IS NULL OR c.sha LIKE ?2)".to_string(),
@@ -145,6 +149,26 @@ impl Commit {
 
         let query = query.map(|query| format!("%{}%", query));
         extract_all_and_count!(params![project_id, query, limit, offset], stmt)
+    }
+
+    pub fn stats(project_id: u32, conn: &Connection) -> Result<HashMap<String, i64>, FownerError> {
+        let sql = r#"
+            SELECT
+                COALESCE (po.handle, o.handle),
+                COUNT(owner_id) AS commit_count
+            FROM commits c
+                JOIN owners o ON o.id = c.owner_id
+                LEFT JOIN owners po ON po.id = o.primary_owner_id
+            WHERE c.project_id = ?1
+            GROUP BY COALESCe (po.handle, o.handle);
+        "#;
+        let mut stmt = conn.prepare(sql)?;
+        let mut rows = stmt.query(params![project_id])?;
+        let mut result = HashMap::new();
+        while let Some(row) = rows.next()? {
+            result.insert(row.get_unwrap(0), row.get_unwrap(1));
+        }
+        Ok(result)
     }
 }
 
@@ -177,7 +201,6 @@ impl<'stmt> From<&Row<'stmt>> for Commit {
 mod test {
     use chrono::{Duration, Utc};
 
-    use crate::Connection;
     use crate::db::models::commit::{Commit, NewCommit};
     use crate::db::models::file_commit::FileCommit;
     use crate::db::models::owner::NewOwner;
@@ -185,6 +208,46 @@ mod test {
     use crate::test::builders::file_builder::FileBuilder;
     use crate::test::builders::project_builder::ProjectBuilder;
     use crate::test::tests::TestHandler;
+    use crate::Connection;
+
+    #[test]
+    fn stats() {
+        let handler = TestHandler::init();
+        let db = &handler.db;
+        let conn = Connection::try_from(db).unwrap();
+        let tmp_dir = &handler.tmp_dir;
+        let project = ProjectBuilder::with_path(tmp_dir).build(&conn).unwrap();
+        let owner = NewOwner {
+            handle: "Krakaw".to_string(),
+            name: None,
+            primary_owner_id: None,
+        }
+        .save(&conn)
+        .unwrap();
+        let c1_commit_time = Utc::now().naive_utc();
+        NewCommit {
+            owner_id: owner.id,
+            project_id: project.id,
+            sha: "deadbeef".to_string(),
+            parent_sha: None,
+            description: "Initial Commit".to_string(),
+            commit_time: c1_commit_time,
+        }
+        .save(&conn)
+        .unwrap();
+        NewCommit {
+            owner_id: owner.id,
+            project_id: project.id,
+            sha: "deadbeef2".to_string(),
+            parent_sha: None,
+            description: "Another commit".to_string(),
+            commit_time: c1_commit_time,
+        }
+        .save(&conn)
+        .unwrap();
+        let stats = Commit::stats(project.id, &conn).unwrap();
+        assert_eq!(stats.get("Krakaw").unwrap(), &2);
+    }
 
     #[test]
     fn save() {
@@ -198,8 +261,8 @@ mod test {
             name: None,
             primary_owner_id: None,
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
         let c1_commit_time = Utc::now().naive_utc();
         let commit_1 = NewCommit {
             owner_id: owner.id,
@@ -209,8 +272,8 @@ mod test {
             description: "Initial Commit".to_string(),
             commit_time: c1_commit_time,
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
         assert_eq!(commit_1.id, 1);
         assert_eq!(commit_1.project_id, project.id);
         assert_eq!(commit_1.sha, "deadbeef".to_string());
@@ -226,8 +289,8 @@ mod test {
             description: "Feature Commit".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
         assert_eq!(commit_2.sha, "deadbeef2".to_string());
         assert_eq!(commit_2.parent_sha, Some(vec!["deadbeef".to_string()]));
     }
@@ -244,8 +307,8 @@ mod test {
             name: None,
             primary_owner_id: None,
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
         let owner_id = owner.id;
         let commit_1 = NewCommit {
             owner_id,
@@ -255,8 +318,8 @@ mod test {
             description: "Initial Commit".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
         let commit_2 = NewCommit {
             owner_id,
             project_id: project.id,
@@ -265,8 +328,8 @@ mod test {
             description: "Feature Commit".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
         let commit_3 = NewCommit {
             owner_id,
             project_id: project.id,
@@ -278,8 +341,8 @@ mod test {
                 .checked_add_signed(Duration::seconds(10))
                 .unwrap(),
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
 
         let c1 = Commit::load(commit_1.id as i64, &conn).unwrap();
         assert_eq!(c1.sha, commit_1.sha);
@@ -307,16 +370,16 @@ mod test {
             name: None,
             primary_owner_id: None,
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
         let owner_id = owner.id;
         let file_1 = FileBuilder {
             project_id: project.id,
             ..FileBuilder::default()
         }
-            .with_features(vec!["Feature 1".to_string(), "Feature 2".to_string()])
-            .build(&conn)
-            .unwrap();
+        .with_features(vec!["Feature 1".to_string(), "Feature 2".to_string()])
+        .build(&conn)
+        .unwrap();
 
         let mut commit_1 = NewCommit {
             owner_id,
@@ -326,14 +389,14 @@ mod test {
             description: "Initial Commit".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
         FileCommit {
             file_id: file_1.id,
             commit_id: commit_1.id,
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
         commit_1.feature_names = vec!["Feature 1".to_string(), "Feature 2".to_string()];
         let commit_2 = NewCommit {
             owner_id,
@@ -346,8 +409,8 @@ mod test {
                 .checked_add_signed(Duration::seconds(5))
                 .unwrap(),
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
         let commit_3 = NewCommit {
             owner_id,
             project_id: project.id,
@@ -359,10 +422,11 @@ mod test {
                 .checked_add_signed(Duration::seconds(10))
                 .unwrap(),
         }
-            .save(&conn)
-            .unwrap();
+        .save(&conn)
+        .unwrap();
 
-        let (total, commits_desc) = Commit::search(project.id, None, 10, 0, None, None, &conn).unwrap();
+        let (total, commits_desc) =
+            Commit::search(project.id, None, 10, 0, None, None, &conn).unwrap();
         assert_eq!(total, 3);
         assert_eq!(commits_desc.len(), 3);
         assert_eq!(
@@ -379,7 +443,7 @@ mod test {
             Some(SortDir::Asc),
             &conn,
         )
-            .unwrap();
+        .unwrap();
         assert_eq!(total, 3);
         assert_eq!(commits.len(), 3);
         assert_eq!(
@@ -408,7 +472,7 @@ mod test {
             None,
             &conn,
         )
-            .unwrap();
+        .unwrap();
         assert_eq!(total, 1);
         assert_eq!(commits.len(), 1);
         assert_eq!(commits.first().unwrap().sha, commit_2.sha);

@@ -1,9 +1,9 @@
 use std::fmt::{Display, Formatter};
 
-use r2d2_sqlite::rusqlite::ToSql;
 use r2d2_sqlite::rusqlite::types::ToSqlOutput;
+use r2d2_sqlite::rusqlite::ToSql;
 use serde::{Deserialize, Serialize};
-use serde_with::{DisplayFromStr, serde_as};
+use serde_with::{serde_as, DisplayFromStr};
 
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -16,7 +16,7 @@ pub struct Paging {
     pub offset: u32,
     #[serde(default)]
     #[serde_as(as = "DisplayFromStr")]
-    pub total: u64,
+    pub total: i64,
     #[serde(default)]
     pub sort: Option<String>,
     #[serde(default)]
