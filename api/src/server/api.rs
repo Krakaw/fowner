@@ -9,7 +9,7 @@ use actix_web::{web, App, HttpResponse, HttpServer};
 use log::{info, warn};
 use serde_json::json;
 
-use crate::server::controllers::{commits, features, files, owners, projects};
+use crate::server::controllers::{commits, features, files, owners, projects, stats};
 use crate::{Db, FownerError};
 
 pub struct Api;
@@ -86,6 +86,10 @@ impl Api {
                                         .route("", web::get().to(commits::search)),
                                 ),
                         ),
+                )
+                .service(
+                    web::scope("/stats")
+                        .route("/contributions", web::get().to(stats::contributions)),
                 )
                 .service(web::scope("/status").route(
                     "",

@@ -12,6 +12,7 @@ use crate::FownerError;
 mod migrations;
 pub mod models;
 pub mod processor;
+pub mod stats;
 
 #[derive(Debug, Clone)]
 pub struct Db {

@@ -151,7 +151,10 @@ impl Commit {
         extract_all_and_count!(params![project_id, query, limit, offset], stmt)
     }
 
-    pub fn stats(project_id: u32, conn: &Connection) -> Result<HashMap<String, i64>, FownerError> {
+    pub fn commits_per_handle(
+        project_id: u32,
+        conn: &Connection,
+    ) -> Result<HashMap<String, i64>, FownerError> {
         let sql = r#"
             SELECT
                 COALESCE (po.handle, o.handle),
@@ -160,7 +163,7 @@ impl Commit {
                 JOIN owners o ON o.id = c.owner_id
                 LEFT JOIN owners po ON po.id = o.primary_owner_id
             WHERE c.project_id = ?1
-            GROUP BY COALESCe (po.handle, o.handle);
+            GROUP BY COALESCE (po.handle, o.handle);
         "#;
         let mut stmt = conn.prepare(sql)?;
         let mut rows = stmt.query(params![project_id])?;
@@ -245,7 +248,7 @@ mod test {
         }
         .save(&conn)
         .unwrap();
-        let stats = Commit::stats(project.id, &conn).unwrap();
+        let stats = Commit::commits_per_handle(project.id, &conn).unwrap();
         assert_eq!(stats.get("Krakaw").unwrap(), &2);
     }
 

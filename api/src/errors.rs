@@ -1,6 +1,7 @@
-use actix_web::http::uri::InvalidUri;
 use std::num::ParseIntError;
 use std::string::FromUtf8Error;
+
+use actix_web::http::uri::InvalidUri;
 use thiserror::Error;
 
 #[allow(dead_code)]
@@ -40,6 +41,8 @@ pub enum FownerError {
     AwcPayload(#[from] awc::error::JsonPayloadError),
     #[error("File Cannot Have Features: {0}")]
     FileCannotHaveFeatures(String),
+    #[error("Invalid Date String: {0}")]
+    ParseDate(#[from] chrono::ParseError),
     #[error("Internal Error: {0}")]
     Internal(String),
 }

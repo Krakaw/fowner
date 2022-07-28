@@ -150,6 +150,11 @@ pub fn migrations() -> Migrations<'static> {
             CREATE UNIQUE INDEX idx_file_commits_file_id_commit_id ON file_commits (file_id, commit_id);
         "#,
         ),
+        M::up(
+            r#"
+            ALTER TABLE owners ADD COLUMN github_url TEXT NULL;
+        "#,
+        ),
     ])
 }
 
