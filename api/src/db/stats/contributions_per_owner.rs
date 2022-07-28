@@ -107,7 +107,7 @@ pub fn contributions_per_owner(
         } else {
             "c.project_id, p.name as project_name,"
         },
-        group_projects = if merge_projects { "c.project_id," } else { "" },
+        group_projects = if merge_projects { "" } else { "c.project_id," },
         date_format = breakdown
     );
     let mut stmt = conn.prepare(sql.as_str())?;
