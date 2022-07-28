@@ -1,20 +1,18 @@
 import React from 'react';
 import './App.css';
-import Projects from "./components/Projects";
 import {QueryClient, QueryClientProvider} from 'react-query'
-import {Link, Outlet, useParams} from "react-router-dom";
+import {Link, Outlet} from "react-router-dom";
 
 
 const queryClient = new QueryClient()
 
 function App() {
-    const {projectId, ownerId} = useParams();
 
     return (
         <QueryClientProvider client={queryClient}>
             <div className="App">
                 <header className="App-header">
-                    <Link to={"/"}>
+                    <Link to={"/projects"}>
                         <img src="/images/logo.svg" className="App-logo" alt="fowner-logo"/>
                     </Link>
                     <span style={{flex: 1}}></span>
@@ -29,11 +27,7 @@ function App() {
                         </svg>
                     </a>
                 </header>
-                {projectId || ownerId ?
-                    <Outlet/>
-                    :
-                    <Projects showSelect={false}/>
-                }
+                <Outlet/>
 
             </div>
         </QueryClientProvider>

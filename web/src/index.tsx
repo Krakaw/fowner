@@ -7,17 +7,27 @@ import {HashRouter, Route, Routes,} from "react-router-dom";
 import Commits from "./components/Commits";
 import FileBetweenCommits from "./routes/FileBetweenCommits";
 import Owner from "./routes/Owner";
+import Contributors from "./routes/stats/Contributors";
+import Projects from "./components/Projects";
+import Owners from "./routes/Owners";
 
 const root = ReactDOM.createRoot(
     document.getElementById('root') as HTMLElement
 );
+
 root.render(
     <React.StrictMode>
         <HashRouter>
             <Routes>
                 <Route path={"/"} element={<App/>}>
+                    <Route path={"/stats/contributors/:projectId"} element={<Contributors/>}/>
+                    <Route path={"/stats/contributors"} element={<Contributors/>}/>
+
+                    <Route path={"/projects"} element={<Projects showSelect={false}/>}/>
                     <Route path={"/projects/:projectId"} element={<Commits/>}/>
                     <Route path={"/files/:projectId/:startSha/:endSha"} element={<FileBetweenCommits/>}/>
+
+                    <Route path={"/owners"} element={<Owners/>}/>
                     <Route path={"/owners/:ownerId"} element={<Owner/>}/>
                 </Route>
             </Routes>

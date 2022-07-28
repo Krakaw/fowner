@@ -12,6 +12,7 @@ pub struct ContributionStatsQuery {
     start: Option<NaiveDate>,
     end: Option<NaiveDate>,
     breakdown: Option<TimeBreakdown>,
+    merge_projects: Option<bool>,
 }
 
 pub async fn contributions(
@@ -27,6 +28,7 @@ pub async fn contributions(
         query.start,
         query.end,
         query.breakdown,
+        query.merge_projects.unwrap_or_default(),
         &conn,
     )?;
     Ok(web::Json(contributions))

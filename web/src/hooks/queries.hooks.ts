@@ -91,3 +91,5 @@ export const useDeleteProject = (projectId: number) => useQuery(['deleteProject'
         enabled: false,
     }
 )
+
+export const useContributorStats = (projectId?: number) => useQuery(['contributorStats', projectId], () => fetch(`${config.apiUrl}/stats/contributions?${projectId ? `project_id=${projectId}` : 'merge_projects=true'}`).then(res => res.json()))

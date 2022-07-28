@@ -15,6 +15,7 @@ pub struct ContributionResponse {
     project_name: String,
     start: NaiveDate,
     end: NaiveDate,
+    breakdown: TimeBreakdown,
     contributions: HashMap<u32, Contributions>,
 }
 
@@ -77,14 +78,14 @@ pub fn contributions_per_owner(
     start: Option<NaiveDate>,
     end: Option<NaiveDate>,
     time_breakdown: Option<TimeBreakdown>,
+    merge_projects: bool,
     conn: &Connection,
 ) -> Result<HashMap<u32, ContributionResponse>, FownerError> {
     let time_breakdown = time_breakdown.unwrap_or_default();
     let breakdown: String = time_breakdown.into();
     let sql = format!(
         r#"
-    SELECT c.project_id,
-           p.name                                                   as project_name,
+    SELECT {merge_projects}
            coalesce(o.primary_owner_id, o.id)                       as owner_id,
            coalesce(po.handle, o.handle)                            as handle,
            strftime('{date_format}', datetime(commit_time, 'unixepoch')) as commit_time_string,
@@ -98,9 +99,15 @@ pub fn contributions_per_owner(
     AND (?3 IS NULL OR commit_time >= ?3)
     AND (?4 IS NULL OR commit_time <= ?4)
 
-    GROUP BY c.project_id, coalesce(o.primary_owner_id, o.id), strftime('{date_format}', datetime(commit_time, 'unixepoch'))
+    GROUP BY {group_projects} coalesce(o.primary_owner_id, o.id), strftime('{date_format}', datetime(commit_time, 'unixepoch'))
     ORDER BY commit_time;
     "#,
+        merge_projects = if merge_projects {
+            "0 as project_id, 'All Projects' as project_name,"
+        } else {
+            "c.project_id, p.name as project_name,"
+        },
+        group_projects = if merge_projects { "c.project_id," } else { "" },
         date_format = breakdown
     );
     let mut stmt = conn.prepare(sql.as_str())?;
@@ -120,7 +127,7 @@ pub fn contributions_per_owner(
         let commit_time_string: String = row.get_unwrap(4);
 
         let date_string = match time_breakdown {
-            TimeBreakdown::Daily => format!("{}", &commit_time_string),
+            TimeBreakdown::Daily => commit_time_string.clone(),
             TimeBreakdown::Monthly => format!("{}-01", &commit_time_string),
             TimeBreakdown::Yearly => format!("{}-01-01", &commit_time_string),
         };
@@ -132,6 +139,7 @@ pub fn contributions_per_owner(
             project_name,
             start: commit_date,
             end: commit_date,
+            breakdown: time_breakdown,
             contributions: HashMap::new(),
         });
         if commit_date > contribution_response.end {
@@ -139,7 +147,7 @@ pub fn contributions_per_owner(
         }
         let contribution_count = ContributionCount {
             commit_count,
-            commit_time: commit_time_string.to_string(),
+            commit_time: commit_time_string,
         };
         let mut contributions = contribution_response
             .contributions

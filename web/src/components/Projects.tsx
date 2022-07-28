@@ -45,6 +45,9 @@ export const Projects = (props: ProjectProps) => {
                             <Delete projectId={r.id}/>
                         }
                     </div>
+                    <Link to={`/stats/contributors/${r.id}`}>
+                        Contributor Stats
+                    </Link>
                 </td>
 
             </tr>)}
