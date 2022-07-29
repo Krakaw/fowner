@@ -10,7 +10,6 @@ function CombinedContribution({data = {}}: { data: any }) {
             title: {
                 display: true,
                 text: `${data.owner_handle} (${data.total})`
-
             }
         },
         elements: {
@@ -36,9 +35,9 @@ function CombinedContribution({data = {}}: { data: any }) {
 
     };
 
-    return (<>
+    return (<div className={'graph'}>
         <Line options={options} data={data}/>
-    </>)
+    </div>)
 }
 
 export default CombinedContribution;
