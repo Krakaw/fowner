@@ -212,6 +212,8 @@ impl<'stmt> From<&Row<'stmt>> for Commit {
 
 #[cfg(test)]
 mod test {
+    use std::thread::sleep;
+
     use chrono::{Duration, Utc};
 
     use crate::db::models::commit::{Commit, NewCommit};
@@ -307,13 +309,14 @@ mod test {
         assert_eq!(commit_2.sha, "deadbeef2".to_string());
         assert_eq!(commit_2.parent_sha, Some(vec!["deadbeef".to_string()]));
 
+        sleep(Duration::milliseconds(500).to_std().unwrap());
         // If a commit with the same sha is re-added update the details
         let commit_override = NewCommit {
             owner_id: owner.id,
             project_id: project.id,
             sha: "deadbeef2".to_string(),
             parent_sha: Some(vec!["deadbeefa".to_string()]),
-            description: "Feature Commit 2".to_string(),
+            description: "Feature Commit Override".to_string(),
             commit_time: Utc::now().naive_utc(),
         }
         .save(&conn)
@@ -323,6 +326,12 @@ mod test {
             commit_override.parent_sha,
             Some(vec!["deadbeefa".to_string()])
         );
+        assert_eq!(
+            commit_override.description,
+            "Feature Commit Override".to_string()
+        );
+        assert!(commit_override.commit_time > commit_2.commit_time);
+        assert!(commit_override.updated_at > commit_2.created_at);
     }
 
     #[test]

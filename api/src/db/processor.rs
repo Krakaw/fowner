@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use log::{debug, error};
+use log::{debug, error, trace};
 
 use crate::db::models::commit::{Commit, NewCommit};
 use crate::db::models::feature::NewFeature;
@@ -72,15 +72,16 @@ impl<'a> Processor<'a> {
             if sha == stop_at_sha {
                 break;
             }
-            let commit = NewCommit {
+            let new_commit = NewCommit {
                 owner_id: owner.id,
                 project_id,
                 sha: sha.clone(),
                 parent_sha: git_history.parent_sha.clone(),
                 description: git_history.summary.clone(),
                 commit_time: commit_date,
-            }
-            .save(self.conn)?;
+            };
+            trace!("new_commit = {:?}", new_commit);
+            let commit = new_commit.save(self.conn)?;
             // 3. Create the features
             let mut features = vec![];
             let mut source_feature_names = vec![];
