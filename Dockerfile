@@ -1,4 +1,4 @@
-FROM rust:1.61.0-bullseye as be_builder
+FROM rust:1.66.0-bullseye as be_builder
 WORKDIR /usr/src/fowner
 
 COPY ./api/Cargo.lock .
@@ -19,7 +19,7 @@ RUN npm ci
 COPY web .
 RUN npm run build
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 WORKDIR /opt/fowner
 RUN apt-get update \
     && apt-get install -y openssh-client git libsqlite3-dev curl \

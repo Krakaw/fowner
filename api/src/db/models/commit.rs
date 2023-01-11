@@ -46,6 +46,7 @@ impl NewCommit {
                           commit_time = EXCLUDED.commit_time,
                           updated_at  = strftime('%s', 'now');
         "#)?;
+
         let _res = stmt.execute(params![
             self.owner_id,
             self.project_id,
