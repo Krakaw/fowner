@@ -1,13 +1,15 @@
+use std::path::{Path, PathBuf};
+
+use chrono::NaiveDateTime;
+use r2d2_sqlite::rusqlite::{params, Row};
+use serde::{Deserialize, Serialize};
+
 use crate::db::models::feature::Feature;
 use crate::db::models::{extract_all, extract_first};
 use crate::db::Connection;
 use crate::errors::FownerError;
 use crate::git::manager::GitManager;
 use crate::File;
-use chrono::NaiveDateTime;
-use r2d2_sqlite::rusqlite::{params, Row};
-use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Project {
@@ -115,7 +117,7 @@ impl Project {
             } else {
                 let path: Vec<&str> = repo_url.rsplit(':').collect();
                 let repo_owner: Vec<&str> = path
-                    .get(0)
+                    .first()
                     .ok_or_else(|| {
                         FownerError::GitError("Invalid SSH Github url in repo_url".to_string())
                     })?
@@ -124,7 +126,7 @@ impl Project {
                 repo_owner
             };
             let repo = repo_owner
-                .get(0)
+                .first()
                 .map(|r| r.replace(".git", ""))
                 .ok_or_else(|| {
                     FownerError::GitError("Missing repository in repo_url".to_string())
@@ -204,11 +206,12 @@ impl From<&GitManager> for NewProject {
 
 #[cfg(test)]
 mod tests {
+    use std::env;
+    use std::path::{Path, PathBuf};
+
     use crate::db::models::project::NewProject;
     use crate::test::tests::TestHandler;
     use crate::{Connection, Project};
-    use std::env;
-    use std::path::{Path, PathBuf};
 
     fn add_project(conn: &Connection, tmp_dir: &Path, name: String) -> Project {
         let path = tmp_dir.join(&name);

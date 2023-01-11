@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use chrono::NaiveDateTime;
 use r2d2_sqlite::rusqlite::{params, Row};
 use serde::{Deserialize, Serialize};
@@ -160,28 +158,28 @@ impl Commit {
         extract_all_and_count!(params![project_id, query, limit, offset], stmt)
     }
 
-    pub fn commits_per_handle(
-        project_id: u32,
-        conn: &Connection,
-    ) -> Result<HashMap<String, i64>, FownerError> {
-        let sql = r#"
-            SELECT
-                COALESCE (po.handle, o.handle),
-                COUNT(owner_id) AS commit_count
-            FROM commits c
-                JOIN owners o ON o.id = c.owner_id
-                LEFT JOIN owners po ON po.id = o.primary_owner_id
-            WHERE c.project_id = ?1
-            GROUP BY COALESCE (po.handle, o.handle);
-        "#;
-        let mut stmt = conn.prepare(sql)?;
-        let mut rows = stmt.query(params![project_id])?;
-        let mut result = HashMap::new();
-        while let Some(row) = rows.next()? {
-            result.insert(row.get_unwrap(0), row.get_unwrap(1));
-        }
-        Ok(result)
-    }
+    // pub fn commits_per_handle(
+    //     project_id: u32,
+    //     conn: &Connection,
+    // ) -> Result<HashMap<String, i64>, FownerError> {
+    //     let sql = r#"
+    //         SELECT
+    //             COALESCE (po.handle, o.handle),
+    //             COUNT(owner_id) AS commit_count
+    //         FROM commits c
+    //             JOIN owners o ON o.id = c.owner_id
+    //             LEFT JOIN owners po ON po.id = o.primary_owner_id
+    //         WHERE c.project_id = ?1
+    //         GROUP BY COALESCE (po.handle, o.handle);
+    //     "#;
+    //     let mut stmt = conn.prepare(sql)?;
+    //     let mut rows = stmt.query(params![project_id])?;
+    //     let mut result = HashMap::new();
+    //     while let Some(row) = rows.next()? {
+    //         result.insert(row.get_unwrap(0), row.get_unwrap(1));
+    //     }
+    //     Ok(result)
+    // }
 }
 
 impl<'stmt> From<&Row<'stmt>> for Commit {

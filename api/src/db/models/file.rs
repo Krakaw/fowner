@@ -139,7 +139,7 @@ impl File {
                 if !row.is_empty() {
                     let parts = row.split('|').collect::<Vec<&str>>();
                     return Some((
-                        parts.get(0).cloned().unwrap(),
+                        parts.first().cloned().unwrap(),
                         parts
                             .get(1)
                             .cloned()
