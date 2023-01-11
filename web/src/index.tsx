@@ -20,6 +20,8 @@ root.render(
         <HashRouter>
             <Routes>
                 <Route path={"/"} element={<App/>}>
+                    <Route index element={<Projects showSelect={false}/>}/>
+
                     <Route path={"/stats/contributors/:projectId"} element={<Contributors/>}/>
                     <Route path={"/stats/contributors"} element={<Contributors/>}/>
 
@@ -29,6 +31,8 @@ root.render(
 
                     <Route path={"/owners"} element={<Owners/>}/>
                     <Route path={"/owners/:ownerId"} element={<Owner/>}/>
+
+
                 </Route>
             </Routes>
         </HashRouter>
