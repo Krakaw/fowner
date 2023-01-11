@@ -1,8 +1,8 @@
-use actix_web::{Responder, Result, web};
+use actix_web::{web, Responder, Result};
 
-use crate::{Connection, Db};
 use crate::db::models::commit::Commit;
 use crate::server::controllers::{PagingResponse, SearchRequest};
+use crate::{Connection, Db};
 
 pub async fn search(
     db: web::Data<Db>,
