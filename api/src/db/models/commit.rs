@@ -42,7 +42,7 @@ impl NewCommit {
         ON CONFLICT
             DO UPDATE SET owner_id    = EXCLUDED.owner_id,
                           parent_sha  = EXCLUDED.parent_sha,
-                          description = EXCLUDED.parent_sha,
+                          description = EXCLUDED.description,
                           commit_time = EXCLUDED.commit_time,
                           updated_at  = strftime('%s', 'now');
         "#)?;
