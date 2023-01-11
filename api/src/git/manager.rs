@@ -28,6 +28,26 @@ impl GitManager {
         Ok(git_manager)
     }
 
+    pub fn cleanup(&self) -> Result<String, FownerError> {
+        if self.is_valid_repo()? {
+            // TODO: Should probably allow custom origins
+            let args = vec!["remote", "prune", "origin"];
+            let result = Command::new("git")
+                .current_dir(&self.path)
+                .args(args)
+                .arg(".")
+                .output()?;
+            if !result.status.success() {
+                return Err(FownerError::Execution(String::from_utf8(result.stderr)?));
+            }
+            Ok(String::from_utf8(result.stdout)?)
+        } else {
+            Err(FownerError::GitError(
+                "Cannot cleanup a non-existent repo".to_string(),
+            ))
+        }
+    }
+
     /// Parse the git log output and return GitHistory
     /// The history is chronological ASC
     /// If `since` is passed in it only takes commits 1 second AFTER that datetime

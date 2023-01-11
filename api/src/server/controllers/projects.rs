@@ -85,6 +85,27 @@ pub async fn fetch_remote_repo(
     ))
 }
 
+pub async fn clean(
+    db: web::Data<Db>,
+    storage_path: web::Data<PathBuf>,
+    project_id: web::Path<u32>,
+) -> Result<impl Responder> {
+    let project_id = project_id.into_inner();
+    debug!("Cleaning repo for project {}", project_id);
+    let db = db.get_ref();
+    let mut db = db.pool.get().map_err(FownerError::R2d2)?;
+    let tx = db.transaction().map_err(FownerError::Rusqlite)?;
+    let conn = Connection::from(tx);
+    let project_id = project_id;
+    let project = Project::load(project_id, &conn)?;
+    let absolute_path = project.get_absolute_dir(&storage_path.into_inner(), true)?;
+    debug!("Fetching git repo {:?}", absolute_path.to_str());
+    let git_manager = GitManager::init(absolute_path, project.repo_url.clone())?;
+    let result = git_manager.cleanup()?;
+
+    Ok(web::Json(json!({ "message": result })))
+}
+
 pub async fn all(db: web::Data<Db>) -> Result<impl Responder> {
     let db = db.get_ref();
     let conn = Connection::try_from(db)?;

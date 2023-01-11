@@ -74,6 +74,9 @@ impl Api {
                                         .route("", web::post().to(projects::fetch_remote_repo)),
                                 )
                                 .service(
+                                    web::scope("/clean").route("", web::get().to(projects::clean)),
+                                )
+                                .service(
                                     web::scope("/files")
                                         .route(
                                             "/{file_id}/features",
