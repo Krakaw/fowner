@@ -36,7 +36,16 @@ pub struct NewCommit {
 
 impl NewCommit {
     pub fn save(&self, conn: &Connection) -> Result<Commit, FownerError> {
-        let mut stmt = conn.prepare("INSERT INTO commits (owner_id, project_id, sha, parent_sha, description, commit_time, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, strftime('%s','now'), strftime('%s','now'))")?;
+        let mut stmt = conn.prepare(r#"
+        INSERT INTO commits (owner_id, project_id, sha, parent_sha, description, commit_time, created_at, updated_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, strftime('%s', 'now'), strftime('%s', 'now'))
+        ON CONFLICT
+            DO UPDATE SET owner_id    = EXCLUDED.owner_id,
+                          parent_sha  = EXCLUDED.parent_sha,
+                          description = EXCLUDED.parent_sha,
+                          commit_time = EXCLUDED.commit_time,
+                          updated_at  = strftime('%s', 'now');
+        "#)?;
         let _res = stmt.execute(params![
             self.owner_id,
             self.project_id,
@@ -296,6 +305,23 @@ mod test {
         .unwrap();
         assert_eq!(commit_2.sha, "deadbeef2".to_string());
         assert_eq!(commit_2.parent_sha, Some(vec!["deadbeef".to_string()]));
+
+        // If a commit with the same sha is re-added update the details
+        let commit_override = NewCommit {
+            owner_id: owner.id,
+            project_id: project.id,
+            sha: "deadbeef2".to_string(),
+            parent_sha: Some(vec!["deadbeefa".to_string()]),
+            description: "Feature Commit 2".to_string(),
+            commit_time: Utc::now().naive_utc(),
+        }
+        .save(&conn)
+        .unwrap();
+        assert_eq!(commit_override.sha, "deadbeef2".to_string());
+        assert_eq!(
+            commit_override.parent_sha,
+            Some(vec!["deadbeefa".to_string()])
+        );
     }
 
     #[test]
